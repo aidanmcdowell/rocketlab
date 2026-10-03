@@ -504,28 +504,189 @@ function togglePrompt() {
   }
 }
 
+/* ========== UNICODE SANITIZER ========== */
+// OS-level IME and browser smart punctuation convert operators before JS can intercept via HTML attrs.
+// We catch the substituted character on every `input` and `compositionend` event and swap it back.
+var UNICODE_MAP = [
+  ['\u2264','<='], ['\u2265','>='], ['\u2260','!='],
+  ['\u2192','->'], ['\u2190','<-'], ['\u2026','...'],
+  ['\u00D7','*'],  ['\u00F7','/'],  ['\u2212','-'],
+  ['\u201C','"'],  ['\u201D','"'],
+  ['\u2018',"'"],  ['\u2019',"'"],
+  ['\u2039','<'],  ['\u203A','>'],
+];
+
+function sanitizeUnicode(ta) {
+  var val = ta.value;
+  var changed = false;
+  for (var i = 0; i < UNICODE_MAP.length; i++) {
+    var uni = UNICODE_MAP[i][0], asc = UNICODE_MAP[i][1];
+    if (val.indexOf(uni) !== -1) {
+      val = val.split(uni).join(asc);
+      changed = true;
+    }
+  }
+  if (changed) {
+    var s = ta.selectionStart, e = ta.selectionEnd;
+    ta.value = val;
+    ta.selectionStart = s;
+    ta.selectionEnd = e;
+  }
+}
+
+/* ========== AUTOCOMPLETE ========== */
+var PY_KW = [
+  'def','class','return','if','elif','else','for','while','in','not','and','or',
+  'is','None','True','False','import','from','as','with','try','except','finally',
+  'raise','pass','break','continue','lambda','yield','global','nonlocal','del','assert',
+  'isinstance','len','range','enumerate','sorted','reversed','sum','max','min',
+  'print','list','dict','set','tuple','str','int','float','bool','type','super','self',
+  'abs','round','zip','map','filter','any','all','hash',
+  'append','extend','pop','popleft','get','items','keys','values','update',
+  'split','join','strip','replace','format','lower','upper','find','count',
+  'subsystems','packets','packet','voltage','status','intervals','merged',
+  'deque','collections','prev_start','prev_end','current_start','current_end',
+  'process_bus_telemetry','merge_passes','CommandLimiter','validate_sequence',
+  'allow_command','VALID_TRANSITIONS','timestamps','window_sec','max_cmds',
+];
+
+var AC = { visible: false, items: [], sel: 0, token: '', tokenStart: 0 };
+var acEl = null;
+
+function initAC() {
+  acEl = document.createElement('div');
+  acEl.id = 'acDropdown';
+  acEl.style.cssText = 'position:fixed;z-index:99999;display:none;background:#111d2e;' +
+    'border:1px solid rgba(0,212,255,0.4);border-radius:6px;' +
+    'box-shadow:0 8px 28px rgba(0,0,0,0.7);min-width:190px;max-width:300px;' +
+    'max-height:200px;overflow-y:auto;font-family:"JetBrains Mono",monospace;' +
+    'font-size:12.5px;padding:4px 0;';
+  document.body.appendChild(acEl);
+}
+
+function acCandidates(token) {
+  if (!token || token.length < 2) return [];
+  var editor = document.getElementById('codeEditor');
+  var extra = editor ? (editor.value.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || []) : [];
+  var all = PY_KW.slice();
+  extra.forEach(function(w) { if (all.indexOf(w) === -1) all.push(w); });
+  var lo = token.toLowerCase();
+  return all
+    .filter(function(w) { return w.toLowerCase().indexOf(lo) === 0 && w !== token; })
+    .sort(function(a, b) {
+      var ak = PY_KW.indexOf(a) !== -1, bk = PY_KW.indexOf(b) !== -1;
+      return ak !== bk ? (ak ? -1 : 1) : a.length - b.length;
+    })
+    .slice(0, 10);
+}
+
+function showAC(editor) {
+  var pos = editor.selectionStart;
+  var before = editor.value.substring(0, pos);
+  var m = before.match(/[a-zA-Z_][a-zA-Z0-9_]*$/);
+  if (!m) { hideAC(); return; }
+  var token = m[0];
+  var items = acCandidates(token);
+  if (!items.length) { hideAC(); return; }
+  AC.visible = true; AC.items = items; AC.sel = 0;
+  AC.token = token; AC.tokenStart = pos - token.length;
+  renderAC(editor);
+}
+
+function renderAC(editor) {
+  if (!acEl) return;
+  var rect = editor.getBoundingClientRect();
+  var cs = window.getComputedStyle(editor);
+  var lh = parseFloat(cs.lineHeight) || 20;
+  var fs = parseFloat(cs.fontSize) || 13.6;
+  var cw = fs * 0.601;
+  var before = editor.value.substring(0, editor.selectionStart);
+  var lines = before.split('\n');
+  var lineIdx = lines.length - 1;
+  var col = lines[lineIdx].length - AC.token.length;
+  var x = rect.left + parseFloat(cs.paddingLeft) + col * cw;
+  var y = rect.top + parseFloat(cs.paddingTop) + (lineIdx + 1) * lh - editor.scrollTop;
+  acEl.innerHTML = '';
+  AC.items.forEach(function(item, i) {
+    var el = document.createElement('div');
+    var isSel = i === AC.sel;
+    el.textContent = item;
+    el.style.cssText = 'padding:5px 14px;cursor:pointer;white-space:nowrap;' +
+      'color:' + (isSel ? '#060c1a' : '#c8d8f0') + ';' +
+      'background:' + (isSel ? '#00d4ff' : 'transparent') + ';' +
+      'border-left:3px solid ' + (isSel ? '#00d4ff' : 'transparent') + ';';
+    el.onmousedown = function(e) { e.preventDefault(); AC.sel = i; acceptAC(editor); };
+    el.onmouseover = function() { AC.sel = i; renderAC(editor); };
+    acEl.appendChild(el);
+  });
+  var left = Math.min(x, window.innerWidth - 210);
+  var dropH = Math.min(AC.items.length * 28, 200);
+  var top = (y + dropH > window.innerHeight) ? (y - dropH - lh) : y;
+  acEl.style.left = left + 'px';
+  acEl.style.top = top + 'px';
+  acEl.style.display = 'block';
+}
+
+function acceptAC(editor) {
+  if (!AC.visible || !AC.items.length) return;
+  var word = AC.items[AC.sel];
+  var before = editor.value.substring(0, AC.tokenStart);
+  var after  = editor.value.substring(editor.selectionStart);
+  editor.value = before + word + after;
+  editor.selectionStart = editor.selectionEnd = AC.tokenStart + word.length;
+  updateLineNumbers();
+  hideAC();
+}
+
+function hideAC() {
+  AC.visible = false;
+  if (acEl) acEl.style.display = 'none';
+}
+
 /* ========== EDITOR ========== */
-document.addEventListener("DOMContentLoaded", function() {
-  const editor = document.getElementById("codeEditor");
+document.addEventListener('DOMContentLoaded', function() {
+  initAC();
+  var editor = document.getElementById('codeEditor');
   if (editor) {
-    editor.addEventListener("input", function() {
+    editor.addEventListener('input', function() {
+      sanitizeUnicode(editor);  // must run before line count so cursor pos is correct
       updateLineNumbers();
-      if (!State.firstCodeEditTime && State.startTime) {
-        State.firstCodeEditTime = Date.now();
+      if (!State.firstCodeEditTime && State.startTime) State.firstCodeEditTime = Date.now();
+      showAC(editor);
+    });
+    editor.addEventListener('compositionend', function() {
+      sanitizeUnicode(editor);
+      updateLineNumbers();
+    });
+    editor.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (AC.visible && AC.items.length) { acceptAC(editor); }
+        else {
+          var s = editor.selectionStart, en = editor.selectionEnd;
+          editor.value = editor.value.substring(0, s) + '    ' + editor.value.substring(en);
+          editor.selectionStart = editor.selectionEnd = s + 4;
+          updateLineNumbers();
+        }
+        return;
+      }
+      if (AC.visible) {
+        if (e.key === 'ArrowDown')  { e.preventDefault(); AC.sel=(AC.sel+1)%AC.items.length; renderAC(editor); return; }
+        if (e.key === 'ArrowUp')    { e.preventDefault(); AC.sel=(AC.sel-1+AC.items.length)%AC.items.length; renderAC(editor); return; }
+        if (e.key === 'Enter')      { e.preventDefault(); acceptAC(editor); return; }
+        if (e.key === 'Escape' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') { hideAC(); return; }
+        if (e.key === ' ' || e.key === '(' || e.key === ')' || e.key === ':' || e.key === '=') { hideAC(); }
       }
     });
-    editor.addEventListener("keydown", handleTabKey);
-    editor.addEventListener("scroll", syncScroll);
+    editor.addEventListener('scroll', syncScroll);
+    editor.addEventListener('blur',   function() { setTimeout(hideAC, 150); });
+    editor.addEventListener('click',  function() { showAC(editor); });
   }
   initLanding();
-  document.getElementById("chatInput").addEventListener("keydown", function(e) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
-
-  // Begin loading Pyodide in background on page load
-  if (typeof loadPyodide !== "undefined") {
-    initPyodide();
-  }
+  if (typeof loadPyodide !== 'undefined') initPyodide();
 });
 
 function updateLineNumbers() {
