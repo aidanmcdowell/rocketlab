@@ -195,8 +195,7 @@ function startInterview() {
   updateLineNumbers();
 
   document.getElementById("terminalOutput").innerHTML =
-    "<div class='term-line term-sys'>[ SYSTEM ] Sandbox ready. Python execution via Pyodide " + (State.pyodideReady ? "✓" : "(loading…)") + "</div>" +
-    "<div class='term-line term-sys'>[ SYSTEM ] Code execution unlocks in Phase 2.</div>";
+    "<div class='term-line term-sys'>[ SYSTEM ] Sandbox ready. Python execution via Pyodide " + (State.pyodideReady ? "✓" : "(loading…)") + "</div>";
   document.getElementById("chatMessages").innerHTML = "";
 
   showScreen("screen-interview");
@@ -286,7 +285,7 @@ function transitionPhase(phaseId) {
   const ph = PHASES[phaseId];
   document.getElementById("phaseLabel").textContent = "Phase " + phaseId + ": " + ph.name;
   document.getElementById("statusPhase").textContent = "PHASE " + phaseId + "/4";
-  document.getElementById("btnRun").disabled = phaseId < 2;
+  document.getElementById("btnRun").disabled = false;
 
   const sc = SCENARIOS[State.selectedScenario];
   const interviewer = (sc && sc.interviewer) || "Anh";
@@ -825,7 +824,7 @@ function clearTerminal() {
 
 /* ========== TEST EXECUTION ========== */
 async function runTests() {
-  if (State.phase < 2) { addTerminalLine("[ BLOCKED ] Test execution available from Phase 2 onwards.", "term-warn"); return; }
+  // No phase gate — always allow running tests
   const code = document.getElementById("codeEditor").value.trim();
   State.codeRunCount++;
   const terminal = document.getElementById("terminalOutput");
