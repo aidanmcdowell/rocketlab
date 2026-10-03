@@ -1,7 +1,9 @@
-﻿/* ====================================================
+/* ====================================================
    ROCKET LAB INTERVIEW SIMULATOR — app.js
+   Pyodide-powered, with timed interruptions & rubric
    ==================================================== */
 
+/* ========== GLOBAL STATE ========== */
 const State = {
   selectedScenario: null,
   candidateName: "Aidan",
@@ -20,6 +22,13 @@ const State = {
   candidateMessages: [],
   codeRunCount: 0,
   sessionStart: null,
+  pyodideReady: false,
+  pyodideInstance: null,
+  interruptionsFired: {},
+  firstCodeEditTime: null,
+  firstChatTime: null,
+  planningQuestionsAsked: false,
+  codeSnapshots: [],
 };
 
 const PHASES = [
@@ -30,6 +39,67 @@ const PHASES = [
   { id: 4, name: "Q&A & Final Evaluation",         startMin: 26, endMin: 30 },
 ];
 
+/* ========== PYODIDE INITIALIZATION ========== */
+async function initPyodide() {
+  const statusEl = document.getElementById("pyodideStatus");
+  const badgeEl = document.getElementById("pyodideBadge");
+  const statusHudEl = document.getElementById("statusPyodide");
+  try {
+    if (statusEl) statusEl.textContent = "Downloading Python runtime…";
+    State.pyodideInstance = await loadPyodide();
+    State.pyodideReady = true;
+    if (statusEl) statusEl.textContent = "Ready!";
+    if (badgeEl) {
+      badgeEl.textContent = "Pyodide ✓";
+      badgeEl.classList.add("pyodide-ready");
+    }
+    if (statusHudEl) {
+      statusHudEl.textContent = "PYODIDE ✓";
+      statusHudEl.classList.add("status-ok");
+    }
+    console.log("[Pyodide] Ready");
+  } catch (err) {
+    console.warn("[Pyodide] Failed to load:", err);
+    if (statusEl) statusEl.textContent = "Failed — using heuristic fallback";
+    if (badgeEl) {
+      badgeEl.textContent = "Fallback";
+      badgeEl.classList.add("pyodide-fallback");
+    }
+    if (statusHudEl) {
+      statusHudEl.textContent = "PYODIDE ✗";
+      statusHudEl.classList.add("status-warn");
+    }
+  }
+}
+
+async function runCandidatePython(candidateCode, testHarness) {
+  if (!State.pyodideReady || !State.pyodideInstance) {
+    return { success: false, message: "Pyodide not loaded — using heuristic test runner." };
+  }
+  const pyodide = State.pyodideInstance;
+  try {
+    // Reset stdout capture
+    await pyodide.runPythonAsync(`
+import sys, io
+_captured_output = io.StringIO()
+sys.stdout = _captured_output
+sys.stderr = _captured_output
+`);
+    // Run candidate code + test harness
+    await pyodide.runPythonAsync(candidateCode + "\n\n" + testHarness);
+    const output = await pyodide.runPythonAsync("_captured_output.getvalue()");
+    // Reset stdout
+    await pyodide.runPythonAsync("sys.stdout = sys.__stdout__; sys.stderr = sys.__stderr__");
+    return { success: true, message: output };
+  } catch (err) {
+    try {
+      await pyodide.runPythonAsync("sys.stdout = sys.__stdout__; sys.stderr = sys.__stderr__");
+    } catch (_) {}
+    return { success: false, message: err.toString() };
+  }
+}
+
+/* ========== STARS ANIMATION ========== */
 function initStars() {
   const field = document.getElementById("starField");
   if (!field) return;
@@ -42,6 +112,7 @@ function initStars() {
   }
 }
 
+/* ========== LANDING SCREEN ========== */
 function initLanding() {
   initStars();
   const grid = document.getElementById("scenarioGrid");
@@ -81,6 +152,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
+/* ========== INTERVIEW START ========== */
 function startInterview() {
   if (!State.selectedScenario) return;
   State.candidateName = document.getElementById("candidateName").value.trim() || "Candidate";
@@ -95,17 +167,36 @@ function startInterview() {
   State.candidateMessages = [];
   State.codeRunCount = 0;
   State.phase = -1;
+  State.interruptionsFired = {};
+  State.firstCodeEditTime = null;
+  State.firstChatTime = null;
+  State.planningQuestionsAsked = false;
+  State.codeSnapshots = [];
 
   const sc = SCENARIOS[State.selectedScenario];
   document.getElementById("hudScenarioBadge").textContent = sc.label + ": " + sc.title;
   document.getElementById("editorFilename").textContent = "solution_" + sc.id.split("_")[1] + ".py";
+
+  // Update interviewer name
+  const nameEl = document.getElementById("interviewerName");
+  const roleEl = document.getElementById("interviewerRole");
+  if (nameEl) nameEl.textContent = sc.interviewer || "Anh Thai";
+  if (roleEl) roleEl.textContent = (sc.interviewerRole || "Ground Software Engineer") + " · Rocket Lab";
+
+  // Set prompt panel
+  const promptText = document.getElementById("promptText");
+  if (promptText) {
+    const promptContent = sc.openingPrompt.replace(State.candidateName, "").trim();
+    promptText.textContent = promptContent;
+  }
 
   const editor = document.getElementById("codeEditor");
   editor.value = sc.starterCode;
   updateLineNumbers();
 
   document.getElementById("terminalOutput").innerHTML =
-    "<div class='term-line term-sys'>[ SYSTEM ] Sandbox ready. Code execution unlocks in Phase 2.</div>";
+    "<div class='term-line term-sys'>[ SYSTEM ] Sandbox ready. Python execution via Pyodide " + (State.pyodideReady ? "✓" : "(loading…)") + "</div>" +
+    "<div class='term-line term-sys'>[ SYSTEM ] Code execution unlocks in Phase 2.</div>";
   document.getElementById("chatMessages").innerHTML = "";
 
   showScreen("screen-interview");
@@ -113,8 +204,14 @@ function startInterview() {
   State.startTime = Date.now();
   startTimer();
   transitionPhase(0);
+
+  // Load Pyodide in background if not ready
+  if (!State.pyodideReady) {
+    initPyodide();
+  }
 }
 
+/* ========== TIMER ========== */
 function startTimer() {
   if (State.timerInterval) clearInterval(State.timerInterval);
   State.timerInterval = setInterval(tickTimer, 1000);
@@ -140,9 +237,49 @@ function tickTimer() {
     if (elapsedMin >= PHASES[i].startMin) { newPhase = i; break; }
   }
   if (newPhase !== State.phase) transitionPhase(newPhase);
+
+  // Check for timed interruptions
+  checkInterruptions(elapsedMin);
+
   if (remaining === 0) { clearInterval(State.timerInterval); endInterview(); }
 }
 
+/* ========== TIMED INTERRUPTIONS ========== */
+function checkInterruptions(elapsedMin) {
+  const sc = SCENARIOS[State.selectedScenario];
+  if (!sc || !sc.interruptions) return;
+
+  sc.interruptions.forEach(function(intr, idx) {
+    const key = "intr_" + idx;
+    if (State.interruptionsFired[key]) return;
+    if (elapsedMin >= intr.triggerMinute) {
+      State.interruptionsFired[key] = true;
+      // Inject interruption after small delay for realism
+      setTimeout(function() {
+        addSystemMessage("⚡ INTERVIEWER INTERRUPTION — " + (intr.type === "edge-case" ? "Edge Case Check" : "Performance Question"));
+        sendInterviewerMessage(intr.message, "msg-interruption");
+      }, 500);
+    }
+  });
+}
+
+function sendInterviewerMessage(text, extraClass) {
+  const sc = SCENARIOS[State.selectedScenario];
+  const msgs = document.getElementById("chatMessages");
+  const typingEl = document.createElement("div");
+  typingEl.className = "msg msg-marcus";
+  const initial = (sc && sc.interviewer) ? sc.interviewer[0].toUpperCase() : "A";
+  typingEl.innerHTML = "<div class='msg-avatar msg-avatar-marcus'>" + initial + "</div><div class='typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
+  msgs.appendChild(typingEl);
+  msgs.scrollTop = msgs.scrollHeight;
+  const delay = Math.min(Math.max(text.length * 15, 600), 2200);
+  setTimeout(function() {
+    typingEl.remove();
+    appendMessage("marcus", text, extraClass || "");
+  }, delay);
+}
+
+/* ========== PHASE TRANSITIONS ========== */
 function transitionPhase(phaseId) {
   const prev = State.phase;
   State.phase = phaseId;
@@ -151,8 +288,18 @@ function transitionPhase(phaseId) {
   document.getElementById("statusPhase").textContent = "PHASE " + phaseId + "/4";
   document.getElementById("btnRun").disabled = phaseId < 2;
 
+  const sc = SCENARIOS[State.selectedScenario];
+  const interviewer = (sc && sc.interviewer) || "Anh";
+
   if (prev >= 0) showPhaseTransition(ph);
-  else setTimeout(() => sendMarcusMessage(SCENARIOS[State.selectedScenario].openingPrompt), 800);
+  else {
+    // Replace placeholder name in opening prompt
+    let prompt = sc.openingPrompt;
+    if (prompt.includes('${""}')) {
+      prompt = prompt.replace('${""}', State.candidateName);
+    }
+    setTimeout(() => sendMarcusMessage(prompt), 800);
+  }
 
   if (phaseId === 1 && prev === 0)
     setTimeout(() => sendMarcusMessage("Time to plan. Before writing code — walk me through your approach. What will your function signature look like? What data structure will you use for the output? Any edge cases you're already thinking about?"), 1200);
@@ -186,12 +333,15 @@ function showPhaseTransition(ph) {
   setTimeout(() => { overlay.classList.remove("show"); setTimeout(() => overlay.remove(), 300); }, 2000);
 }
 
+/* ========== CHAT SYSTEM ========== */
 function sendMarcusMessage(text, isCurveball) {
+  const sc = SCENARIOS[State.selectedScenario];
   const msgs = document.getElementById("chatMessages");
   const typingEl = document.createElement("div");
   typingEl.className = "msg msg-marcus";
   typingEl.id = "typing-indicator";
-  typingEl.innerHTML = "<div class='msg-avatar msg-avatar-marcus'>M</div><div class='typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
+  const initial = (sc && sc.interviewer) ? sc.interviewer[0].toUpperCase() : "A";
+  typingEl.innerHTML = "<div class='msg-avatar msg-avatar-marcus'>" + initial + "</div><div class='typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
   msgs.appendChild(typingEl);
   msgs.scrollTop = msgs.scrollHeight;
   const delay = Math.min(Math.max(text.length * 18, 800), 2800);
@@ -203,6 +353,7 @@ function sendMarcusMessage(text, isCurveball) {
 
 function appendMessage(sender, text, extraClass) {
   extraClass = extraClass || "";
+  const sc = SCENARIOS[State.selectedScenario];
   const msgs = document.getElementById("chatMessages");
   const isSystem = sender === "system";
   const div = document.createElement("div");
@@ -212,9 +363,11 @@ function appendMessage(sender, text, extraClass) {
   } else {
     const cls = sender === "marcus" ? "msg-marcus" : "msg-candidate";
     const avatarCls = sender === "marcus" ? "msg-avatar-marcus" : "msg-avatar-candidate";
-    const avatarText = sender === "marcus" ? "M" : State.candidateName[0].toUpperCase();
+    const initial = sender === "marcus"
+      ? ((sc && sc.interviewer) ? sc.interviewer[0].toUpperCase() : "A")
+      : State.candidateName[0].toUpperCase();
     div.className = "msg " + cls + " " + extraClass;
-    div.innerHTML = "<div class='msg-avatar " + avatarCls + "'>" + avatarText + "</div><div class='msg-bubble'>" + escapeHtml(text) + "</div>";
+    div.innerHTML = "<div class='msg-avatar " + avatarCls + "'>" + initial + "</div><div class='msg-bubble'>" + escapeHtml(text) + "</div>";
   }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
@@ -229,7 +382,8 @@ function sendMarcusCurveball() {
   const msgs = document.getElementById("chatMessages");
   const typingEl = document.createElement("div");
   typingEl.className = "msg msg-marcus";
-  typingEl.innerHTML = "<div class='msg-avatar msg-avatar-marcus'>M</div><div class='typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
+  const initial = (sc && sc.interviewer) ? sc.interviewer[0].toUpperCase() : "A";
+  typingEl.innerHTML = "<div class='msg-avatar msg-avatar-marcus'>" + initial + "</div><div class='typing-indicator'><div class='typing-dot'></div><div class='typing-dot'></div><div class='typing-dot'></div></div>";
   msgs.appendChild(typingEl);
   msgs.scrollTop = msgs.scrollHeight;
   setTimeout(() => { typingEl.remove(); appendMessage("marcus", sc.curveball, "msg-curveball"); }, 2200);
@@ -239,6 +393,14 @@ function sendMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
+
+  // Track first chat time for rubric
+  if (!State.firstChatTime) {
+    State.firstChatTime = Date.now();
+    const elapsedSec = (State.firstChatTime - State.startTime) / 1000;
+    if (elapsedSec <= 180) State.planningQuestionsAsked = true; // Spoke within first 3 minutes
+  }
+
   appendMessage("candidate", text);
   State.candidateMessages.push(text);
   input.value = "";
@@ -252,22 +414,26 @@ function sendMessage() {
 function getMarcusResponse(userText) {
   const phase = State.phase;
   const lower = userText.toLowerCase();
+  const sc = SCENARIOS[State.selectedScenario];
   let response = "";
+
   if (phase === 0 || phase === 1) {
     if (lower.includes("none") || lower.includes("null") || lower.includes("corrupt") || lower.includes("invalid"))
-      response = "Good catch on the None/corrupt packet case — that's exactly the defensive thinking I'm looking for. Yes, filter those out silently. What about a packet where the subsystem key is missing entirely?";
+      response = "Good catch on the None/corrupt case — that's exactly the defensive thinking I'm looking for. Yes, filter those out silently. What about a packet where a key is missing entirely?";
     else if (lower.includes("output") || lower.includes("format") || lower.includes("return"))
-      response = "The output format is up to you — but if I call result['battery']['max'], what does that imply about the nesting? Make sure you can justify your data structure choice.";
+      response = "The output format is up to you — but think about what makes it easy for the caller. If I call result['battery']['max'], what type should result be? Make sure you can justify your data structure choice.";
     else if (lower.includes("threshold") || lower.includes("alert") || lower.includes("flag"))
-      response = "If any single reading exceeds the threshold, flag the whole subsystem. What if a subsystem appears in packets but not in the threshold dict?";
+      response = "Good question. The threshold for flagging is specified in the prompt. What happens if a subsystem has only corrupt readings — does it get flagged?";
     else if (lower.includes("generator") || lower.includes("stream") || lower.includes("memory"))
       response = "Interesting — we'll get to scale in Phase 3. For now assume batch list input. But keep that generator thought in mind.";
+    else if (lower.includes("sort") || lower.includes("order") || lower.includes("sorted"))
+      response = "Good instinct. What does sorting buy you here? Think about the algorithmic consequence.";
     else {
       const opts = [
         "Makes sense. What's your next step? Walk me through how you'll start the implementation.",
         "Good thinking. What edge case are you most worried about?",
         "Before coding — can you name the two most important defensive checks this function needs?",
-        "How do you plan to structure the output dictionary? What keys will each subsystem entry have?",
+        "How do you plan to structure the output? What keys will each entry have?",
         "Good. The key thing is robustness — you'll see corner cases in the test harness. Go ahead and code."
       ];
       response = opts[Math.floor(Math.random() * opts.length)];
@@ -282,8 +448,8 @@ function getMarcusResponse(userText) {
     else {
       const opts = [
         "Keep going. Narrate what you're doing so I can follow along.",
-        "What's the current state of your loop? What does each iteration do?",
-        "Remember to handle the case where the packet's value key might not exist at all.",
+        "What's the current state of your implementation? What does each step do?",
+        "Remember to handle the case where a key might not exist at all.",
         "What does your function return if I pass in an empty list?",
         "Think about whether you need to store all values, or just maintain a running aggregate."
       ];
@@ -296,7 +462,7 @@ function getMarcusResponse(userText) {
       response = "Look at which test is failing. The assertion message tells you exactly what was expected vs what you returned. Fix that specific case first.";
     else {
       const opts = [
-        "What happens if the input list has zero packets? Does it crash or return something sensible?",
+        "What happens if the input is empty? Does it crash or return something sensible?",
         "Run the tests. Let's see actual output before we theorize.",
         "The curveball I described — what's the minimum change to handle it without rewriting?"
       ];
@@ -325,10 +491,29 @@ function requestHint() {
   sendMarcusMessage("[Hint " + State.hintLevel + "/" + sc.hints.length + "] " + hint);
 }
 
+/* ========== PROMPT PANEL ========== */
+function togglePrompt() {
+  const body = document.getElementById("promptBody");
+  const btn = document.querySelector(".btn-collapse");
+  if (body.classList.contains("collapsed")) {
+    body.classList.remove("collapsed");
+    btn.textContent = "▼";
+  } else {
+    body.classList.add("collapsed");
+    btn.textContent = "▶";
+  }
+}
+
+/* ========== EDITOR ========== */
 document.addEventListener("DOMContentLoaded", function() {
   const editor = document.getElementById("codeEditor");
   if (editor) {
-    editor.addEventListener("input", updateLineNumbers);
+    editor.addEventListener("input", function() {
+      updateLineNumbers();
+      if (!State.firstCodeEditTime && State.startTime) {
+        State.firstCodeEditTime = Date.now();
+      }
+    });
     editor.addEventListener("keydown", handleTabKey);
     editor.addEventListener("scroll", syncScroll);
   }
@@ -336,6 +521,11 @@ document.addEventListener("DOMContentLoaded", function() {
   document.getElementById("chatInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
+
+  // Begin loading Pyodide in background on page load
+  if (typeof loadPyodide !== "undefined") {
+    initPyodide();
+  }
 });
 
 function updateLineNumbers() {
@@ -364,7 +554,7 @@ function copyCode() {
   navigator.clipboard.writeText(document.getElementById("codeEditor").value).then(function() {
     const btn = document.querySelector(".btn-copy");
     btn.textContent = "Copied!";
-    setTimeout(function() { btn.textContent = "Copy"; }, 2000);
+    setTimeout(function() { btn.textContent = "⧉ Copy"; }, 2000);
   });
 }
 
@@ -372,20 +562,92 @@ function clearTerminal() {
   document.getElementById("terminalOutput").innerHTML = "<div class='term-line term-sys'>[ CLEAR ] Terminal cleared.</div>";
 }
 
-function runTests() {
+/* ========== TEST EXECUTION ========== */
+async function runTests() {
   if (State.phase < 2) { addTerminalLine("[ BLOCKED ] Test execution available from Phase 2 onwards.", "term-warn"); return; }
   const code = document.getElementById("codeEditor").value.trim();
   State.codeRunCount++;
   const terminal = document.getElementById("terminalOutput");
   terminal.innerHTML = "";
   addTerminalLine("[ RUN ] Executing candidate solution against test harness...", "term-sys");
-  addTerminalLine("[ SYS ] Sandbox: Python 3.11 — subprocess timeout: 5s", "term-sys");
-  addTerminalLine("", "term-sys");
-  if (!code || code === SCENARIOS[State.selectedScenario].starterCode) {
+
+  const sc = SCENARIOS[State.selectedScenario];
+
+  if (!code || code === sc.starterCode) {
     setTimeout(function() { simulateFailedRun("NotImplementedError: Function not implemented — stub returned None"); }, 400);
     return;
   }
-  setTimeout(function() { simulateTestRun(code); }, 500);
+
+  // Save snapshot for rubric analysis
+  State.codeSnapshots.push({ time: Date.now(), code: code });
+
+  if (State.pyodideReady) {
+    addTerminalLine("[ SYS ] Engine: Pyodide (CPython 3.11 in WebAssembly)", "term-sys");
+    addTerminalLine("", "term-sys");
+
+    const result = await runCandidatePython(code, sc.testHarness);
+
+    if (result.success) {
+      const lines = result.message.split("\n").filter(l => l.trim());
+      let passed = 0;
+      let total = 0;
+      lines.forEach(function(line) {
+        if (line.startsWith("[PASS]")) {
+          addTerminalLine(line, "term-pass");
+          passed++;
+          total++;
+        } else if (line.startsWith("[FAIL]")) {
+          addTerminalLine(line, "term-fail");
+          total++;
+        } else if (line.startsWith("SCORE:")) {
+          addTerminalLine("", "term-sys");
+          addTerminalLine("=".repeat(42), "term-sys");
+          addTerminalLine(line, "term-score");
+        } else if (line === "ALL_TESTS_PASSED") {
+          addTerminalLine(line, "term-pass");
+        } else {
+          addTerminalLine(line, "term-info");
+        }
+      });
+      State.testsPassed = passed;
+      State.testsTotal = total || passed;
+      State.allTestsPassed = result.message.includes("ALL_TESTS_PASSED");
+
+      if (State.allTestsPassed) {
+        setTimeout(function() {
+          sendMarcusMessage("Tests all green! Your solution handles the baseline cases. " + (State.hintUsed ? "You needed some hints — that's fine. " : "") + "Now the curveball: how would you change this for the scenario I described?");
+        }, 1000);
+      } else {
+        var failCount = total - passed;
+        setTimeout(function() {
+          sendMarcusMessage(failCount + " test(s) failing. Read each failure carefully. What specific case is the first failing test checking? Fix that one before moving on.");
+        }, 1000);
+      }
+    } else {
+      // Python error
+      addTerminalLine("", "term-sys");
+      const errorLines = result.message.split("\n");
+      errorLines.forEach(function(line) {
+        if (line.includes("Error") || line.includes("Traceback")) {
+          addTerminalLine(line, "term-error");
+        } else if (line.includes("assert")) {
+          addTerminalLine(line, "term-fail");
+        } else {
+          addTerminalLine(line, "term-error");
+        }
+      });
+      addTerminalLine("", "term-sys");
+      addTerminalLine("SCORE: 0/? tests passed (runtime error)", "term-score");
+      setTimeout(function() {
+        sendMarcusMessage("Runtime error. Read the traceback carefully — what line is it pointing to? The error type tells you exactly what went wrong.");
+      }, 1000);
+    }
+  } else {
+    // Fallback: heuristic test runner (same as original)
+    addTerminalLine("[ SYS ] Engine: Heuristic (Pyodide unavailable)", "term-sys");
+    addTerminalLine("", "term-sys");
+    setTimeout(function() { simulateTestRun(code); }, 500);
+  }
 }
 
 function simulateFailedRun(msg) {
@@ -399,58 +661,52 @@ function simulateFailedRun(msg) {
 
 function simulateTestRun(code) {
   const sc = SCENARIOS[State.selectedScenario];
-  const codeClean = code.replace(/\s|#.*$/mg, "");
   const hasLoop = /for\s+\w/.test(code);
   const hasIf = /if\s+/.test(code);
   const hasReturn = /return/.test(code);
   const hasDict = /\{/.test(code) || /dict\(/.test(code);
   const hasGet = /\.get\(/.test(code);
-  const hasNoneCheck = /None|status.*OK|ERROR|status\b/.test(code);
+  const hasNoneCheck = /None|is None|not.*value/.test(code);
   const hasTry = /try:/.test(code);
-  const sizeOk = codeClean.length > 150;
-  const completeness = [hasLoop, hasIf, hasReturn, hasDict].filter(Boolean).length / 4;
-  const quality = [hasGet, hasNoneCheck, hasTry].filter(Boolean).length;
+  const codeClean = code.replace(/\s|#.*$/mg, "");
+  const sizeOk = codeClean.length > 100;
 
   var testResults = [];
+
   if (sc.id === "scenario_a") {
-    const hasMax = /max\s*[=(]|'max'/.test(code);
-    const hasAvg = /avg|average|sum\s*\/|total\s*\//.test(code);
-    const hasAlert = /alert|threshold|exceed/.test(code);
     testResults = [
       { name: "Test 1 (Basic filtering & metrics)", pass: hasLoop && hasReturn && sizeOk && hasDict },
       { name: "Test 2 (All-corrupt packets)", pass: hasNoneCheck || hasGet },
-      { name: "Test 3 (Unknown subsystem)", pass: hasGet },
+      { name: "Test 3 (Missing subsystem key)", pass: hasGet || hasTry },
       { name: "Test 4 (Empty input)", pass: hasReturn && (code.includes("{}") || hasLoop) },
     ];
   } else if (sc.id === "scenario_b") {
-    const hasStruct = /struct\.unpack/.test(code);
-    const hasSyncCheck = /0xDEAD|DEAD|57005/.test(code);
-    const hasLenCheck = /len\(/.test(code);
+    const hasSort = /sort/.test(code);
+    const hasMax = /max\(/.test(code);
     testResults = [
-      { name: "Test 1 (Valid frame decode)", pass: hasStruct && hasReturn && sizeOk },
-      { name: "Test 2 (Bad sync header)", pass: hasSyncCheck },
-      { name: "Test 3 (Corrupted checksum)", pass: /xor|checksum|\^|XOR/.test(code.toLowerCase()) || /\^/.test(code) },
-      { name: "Test 4 (Truncated frame)", pass: hasLenCheck },
-      { name: "Test 5 (Empty input)", pass: hasLenCheck || hasTry },
+      { name: "Test 1 (Basic overlapping merge)", pass: hasSort && hasReturn && sizeOk },
+      { name: "Test 2 (Empty input)", pass: hasReturn && /\[\]/.test(code) },
+      { name: "Test 3 (Adjacent non-overlapping)", pass: hasSort && hasIf },
+      { name: "Test 4 (Unsorted with multiple merges)", pass: hasSort && hasMax },
+      { name: "Test 5 (Single interval)", pass: hasReturn },
     ];
   } else if (sc.id === "scenario_c") {
-    const hasHeap = /heapq/.test(code);
-    const hasAsync = /async\s+def/.test(code) || /await/.test(code);
-    const hasRetry = /range.*retri|retry|attempt|max_retri/.test(code);
-    const hasBackoff = /sleep|backoff|2\s*\*\*/.test(code);
+    const hasDeque = /deque/.test(code);
+    const hasPopleft = /popleft/.test(code);
     testResults = [
-      { name: "Test 1 (Priority ordering)", pass: hasHeap && hasReturn },
-      { name: "Test 2 (Retry + failure logging)", pass: hasRetry && hasTry },
-      { name: "Test 3 (Success logging)", pass: hasAsync && hasReturn },
+      { name: "Test 1 (Basic rate limiting)", pass: hasReturn && sizeOk },
+      { name: "Test 2 (Window expiry)", pass: hasDeque || hasPopleft || /while/.test(code) },
+      { name: "Test 3 (Burst then wait)", pass: hasDeque && hasReturn },
+      { name: "Test 4 (Single command window)", pass: hasReturn && hasIf },
     ];
   } else if (sc.id === "scenario_d") {
-    const hasFfill = /last_|prev_|None/.test(code);
-    const hasRange = /range\(/.test(code);
+    const hasTransitions = /VALID_TRANSITIONS|transitions|allowed/.test(code);
     testResults = [
-      { name: "Test 1 (Basic forward fill)", pass: hasLoop && hasReturn && hasDict && hasRange },
-      { name: "Test 2 (Silent sensor forward-fill)", pass: hasFfill },
-      { name: "Test 3 (None before first reading)", pass: hasNoneCheck || /is None/.test(code) },
-      { name: "Test 4 (Empty streams)", pass: hasReturn && hasLoop },
+      { name: "Test 1 (Valid full sequence)", pass: hasTransitions && hasReturn && sizeOk },
+      { name: "Test 2 (Invalid transition detected)", pass: hasTransitions && hasIf },
+      { name: "Test 3 (Invalid starting state)", pass: hasIf && /PRE_LAUNCH/.test(code) },
+      { name: "Test 4 (Empty event list)", pass: hasReturn && hasIf },
+      { name: "Test 5 (Unknown state name)", pass: hasGet || hasTransitions },
     ];
   }
 
@@ -496,6 +752,7 @@ function addTerminalLine(text, cssClass) {
   terminal.scrollTop = terminal.scrollHeight;
 }
 
+/* ========== END INTERVIEW & SCORECARD ========== */
 function endInterview() {
   if (State.timerInterval) clearInterval(State.timerInterval);
   addSystemMessage("TIME IS UP — Generating evaluation scorecard...");
@@ -528,11 +785,16 @@ function buildScorecard() {
 
   const breakdown = document.getElementById("scoreBreakdown");
   breakdown.innerHTML = "";
+
+  // Add behavioral rubric section first
+  const behavioralCard = buildBehavioralRubric(code);
+  breakdown.appendChild(behavioralCard);
+
   const dims = [
-    { name: "Defensive Ingestion",          weight: "30%", data: scores.defensive },
-    { name: "Spacecraft Domain Logic",      weight: "25%", data: scores.domain    },
-    { name: "Code Quality & Pythonic Style",weight: "25%", data: scores.pythonic  },
-    { name: "Communication & Clarification",weight: "20%", data: scores.comm      },
+    { name: "Defensive Ingestion",           weight: "30%", data: scores.defensive },
+    { name: "Spacecraft Domain Logic",       weight: "25%", data: scores.domain    },
+    { name: "Code Quality & Pythonic Style", weight: "25%", data: scores.pythonic  },
+    { name: "Communication & Clarification", weight: "20%", data: scores.comm      },
   ];
   dims.forEach(function(d) {
     const barColor = d.data.score >= 75 ? "#00ff94" : d.data.score >= 50 ? "#00d4ff" : "#ff7b2e";
@@ -546,16 +808,86 @@ function buildScorecard() {
     setTimeout(function() { div.querySelector(".breakdown-bar").style.width = d.data.score + "%"; }, 200);
   });
 
-  document.getElementById("scorecardFeedback").innerHTML = "<div class='feedback-title'>Marcus's Final Assessment</div><div class='feedback-text'>" + escapeHtml(generateFeedback(scores, total, sc)) + "</div>";
+  document.getElementById("scorecardFeedback").innerHTML = "<div class='feedback-title'>Anh's Final Assessment</div><div class='feedback-text'>" + escapeHtml(generateFeedback(scores, total, sc)) + "</div>";
   showScreen("screen-scorecard");
 }
 
+/* ========== BEHAVIORAL RUBRIC CARD ========== */
+function buildBehavioralRubric(code) {
+  const div = document.createElement("div");
+  div.className = "breakdown-item breakdown-behavioral";
+
+  const checks = [];
+
+  // 1. Did you speak during the first 3 minutes?
+  const spokeEarly = State.planningQuestionsAsked;
+  checks.push({
+    name: "Spoke/asked questions in first 3 minutes",
+    pass: spokeEarly,
+    detail: spokeEarly ? "You asked clarifying questions before coding — strong signal." : "No questions asked before coding began. Always plan first."
+  });
+
+  // 2. Defensive guards in code
+  const hasDefensiveGuards = /if not /.test(code) || /\.get\(/.test(code) || /is None/.test(code) || /if.*packet/.test(code) || /if.*not.*packet/.test(code);
+  checks.push({
+    name: "Defensive guards (if not, .get(), None checks)",
+    pass: hasDefensiveGuards,
+    detail: hasDefensiveGuards ? "Code includes defensive input validation." : "Missing defensive guards — always check for None, missing keys, and invalid inputs."
+  });
+
+  // 3. Empty input handling
+  const handlesEmpty = /\[\]/.test(code) || /if not /.test(code) || /len\(/.test(code) || /if.*packets/.test(code);
+  checks.push({
+    name: "Handles empty input [] without crash",
+    pass: handlesEmpty,
+    detail: handlesEmpty ? "Empty input case is guarded." : "No explicit empty-input guard. Pass [] and verify no ZeroDivisionError."
+  });
+
+  // 4. Tests were run
+  const ranTests = State.codeRunCount > 0;
+  checks.push({
+    name: "Ran test harness at least once",
+    pass: ranTests,
+    detail: ranTests ? "Tests executed " + State.codeRunCount + " time(s)." : "Never ran the test harness — always verify your code."
+  });
+
+  // 5. Communication volume
+  const goodComm = State.candidateMessages.length >= 3;
+  checks.push({
+    name: "Communicated during implementation (≥3 messages)",
+    pass: goodComm,
+    detail: goodComm ? "Sent " + State.candidateMessages.length + " messages — good narration." : "Only " + State.candidateMessages.length + " message(s). Narrate as you code."
+  });
+
+  const passedCount = checks.filter(c => c.pass).length;
+  const totalChecks = checks.length;
+
+  const checksHtml = checks.map(function(c) {
+    return "<div class='behavioral-check " + (c.pass ? "bcheck-pass" : "bcheck-fail") + "'>" +
+      "<div class='bcheck-icon'>" + (c.pass ? "✓" : "✗") + "</div>" +
+      "<div class='bcheck-content'>" +
+        "<div class='bcheck-name'>" + c.name + "</div>" +
+        "<div class='bcheck-detail'>" + c.detail + "</div>" +
+      "</div>" +
+    "</div>";
+  }).join("");
+
+  div.innerHTML = "<div class='breakdown-header'>" +
+    "<div class='breakdown-name'>🎯 Interview Behavior Rubric</div>" +
+    "<div><span class='breakdown-weight'>Behavioral</span>&nbsp;<span class='breakdown-score' style='color:" + (passedCount >= 4 ? "#00ff94" : passedCount >= 3 ? "#00d4ff" : "#ff7b2e") + "'>" + passedCount + "/" + totalChecks + "</span></div>" +
+    "</div>" +
+    "<div class='behavioral-checks'>" + checksHtml + "</div>";
+
+  return div;
+}
+
+/* ========== SCORING LOGIC ========== */
 function computeScores(sc, code) {
   const rubric = sc.evaluationRubric;
   const defensiveChecks = [
     { name: rubric.defensive[0], pass: /None|is None|not.*value/.test(code) },
     { name: rubric.defensive[1], pass: /\.get\(/.test(code) },
-    { name: rubric.defensive[2], pass: /\[\]|len\(|not.*packet|if.*packet/.test(code) },
+    { name: rubric.defensive[2], pass: /\[\]|len\(|not.*packet|if.*packet|if not /.test(code) },
     { name: rubric.defensive[3], pass: State.testsPassed >= 3 || code.length > 400 },
   ];
   const defScore = Math.round(defensiveChecks.filter(function(c){return c.pass;}).length / defensiveChecks.length * 100);
@@ -563,14 +895,14 @@ function computeScores(sc, code) {
   const domainChecks = [
     { name: rubric.domain[0], pass: /for\s+\w+\s+in/.test(code) && /\{/.test(code) },
     { name: rubric.domain[1], pass: State.testsPassed >= 2 },
-    { name: rubric.domain[2], pass: /alert|threshold|exceed|flag/.test(code) || State.allTestsPassed },
-    { name: rubric.domain[3], pass: State.curvballAsked && State.candidateMessages.some(function(m){return /generator|stream|memory|iter|yield|constant|O\(1\)|buffer/.test(m.toLowerCase());}) },
+    { name: rubric.domain[2], pass: /alert|threshold|exceed|flag|merge|deque|transition|valid/i.test(code) || State.allTestsPassed },
+    { name: rubric.domain[3], pass: State.curvballAsked && State.candidateMessages.some(function(m){return /generator|stream|memory|iter|yield|constant|O\(1\)|O\(n\)|buffer|complex|sort|deque/i.test(m);}) },
   ];
   const domScore = Math.round(domainChecks.filter(function(c){return c.pass;}).length / domainChecks.length * 100);
 
   const pythonicChecks = [
-    { name: rubric.pythonic[0], pass: /\.get\(/.test(code) },
-    { name: rubric.pythonic[1], pass: /\[.*for.*in.*\]/.test(code) || /dict\(/.test(code) },
+    { name: rubric.pythonic[0], pass: /\.get\(/.test(code) || /deque/.test(code) || /sorted/.test(code) },
+    { name: rubric.pythonic[1], pass: /\[.*for.*in.*\]/.test(code) || /dict\(/.test(code) || /\.sort\(/.test(code) },
     { name: rubric.pythonic[2], pass: !/for.*in.*for.*in.*for/.test(code) },
     { name: rubric.pythonic[3], pass: code.split("\n").filter(function(l){return l.trim();}).length > 8 && code.length < 3000 },
   ];
@@ -602,23 +934,36 @@ function getVerdict(score) {
 
 function generateFeedback(scores, total, sc) {
   const name = State.candidateName;
+  const interviewer = sc.interviewer || "Anh";
   const lines = [name + ", here's my honest assessment after 30 minutes:", ""];
+
+  // Behavioral observations
+  if (State.planningQuestionsAsked) {
+    lines.push("You asked clarifying questions before coding — that's exactly what I look for. In ground software, assumptions kill missions.");
+  } else {
+    lines.push("You jumped straight to code without asking questions. In this role, the first 3 minutes should be spent understanding the problem. Ask about edge cases, output format, and constraints before writing a single line.");
+  }
+
   if (scores.defensive.score >= 75)
-    lines.push("Defensive coding was solid — you thought about None checks and missing keys before they became runtime errors. That's the mindset we need parsing live telemetry from a vehicle that can't be rebooted.");
+    lines.push("\nDefensive coding was solid — you thought about None checks and missing keys before they became runtime errors. That's the mindset we need parsing live telemetry from a vehicle that can't be rebooted.");
   else
-    lines.push("Defensive coding needs work. An unhandled KeyError or NoneType during a pass can mean losing minutes of mission data. Always guard inputs first, before the happy path.");
+    lines.push("\nDefensive coding needs work. An unhandled KeyError or NoneType during a pass can mean losing minutes of mission data. Always guard inputs first, before the happy path.");
+
   if (scores.domain.score >= 75)
     lines.push("\nYou showed good domain understanding — thinking about the streaming/memory tradeoff is a real constraint we hit at scale. That's not a trivial observation.");
   else
-    lines.push("\nDomain fluency is an area to develop. Why we use generators over lists, why out-of-order timestamps matter in telemetry — read up on spacecraft data protocols. CCSDS is a good start.");
+    lines.push("\nDomain fluency is an area to develop. Understanding why we care about memory, ordering, and failure modes in telemetry processing — read up on spacecraft data protocols. CCSDS is a good start.");
+
   if (scores.pythonic.score >= 75)
     lines.push("\nYour Python was clean and idiomatic. Right tools for the job, no overengineering. That's valued here — we need reliability, not cleverness.");
   else
     lines.push("\nCode quality could be more idiomatic. Practice .get() for safe dict access, list comprehensions for filtering, and built-ins like max() and sum() instead of manual loops.");
+
   if (scores.comm.score >= 75)
     lines.push("\nCommunication was a real strength — you asked the right clarifying questions and narrated your reasoning as you coded. In mission-critical environments, that transparency is essential.");
   else
     lines.push("\nCommunication is the area with most room for growth. Before writing a single line, map out edge cases verbally. Interviewers and teammates need to follow your thinking.");
+
   lines.push("");
   if (total >= 70)
     lines.push("Overall: " + total + "/100. I'd recommend moving forward. Come back with the curveball implemented and we'll go deeper on system design.");
@@ -627,6 +972,7 @@ function generateFeedback(scores, total, sc) {
   return lines.join("\n");
 }
 
+/* ========== UTILITIES ========== */
 function animateNumber(el, from, to, duration) {
   const start = performance.now();
   function tick(now) {
@@ -647,12 +993,13 @@ function restartApp() {
 function reviewSession() {
   const msgs = State.chatHistory;
   const sc = SCENARIOS[State.selectedScenario];
+  const interviewer = (sc && sc.interviewer) || "Anh Thai";
   const win = window.open("", "_blank");
   var html = "<html><head><title>Session Review</title><style>body{background:#060c1a;color:#e8f0ff;font-family:'JetBrains Mono',monospace;padding:40px;max-width:800px;margin:0 auto;line-height:1.7}h1{color:#00d4ff;margin-bottom:4px}h2{color:#7a9abf;font-size:.9rem;margin-bottom:32px}.msg{margin-bottom:20px;padding:14px 16px;border-radius:8px;border-left:3px solid}.marcus{border-color:#006eff;background:rgba(0,110,255,0.06)}.candidate{border-color:#7b2fff;background:rgba(123,47,255,0.06)}.sender{font-size:.72rem;color:#7a9abf;margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase}</style></head><body><h1>Rocket Lab Interview Session Review</h1><h2>" + State.candidateName + " — " + (sc ? sc.title : "") + "</h2>";
   msgs.forEach(function(m) {
     if (m.sender === "system") return;
     var cls = m.sender === "marcus" ? "marcus" : "candidate";
-    var sender = m.sender === "marcus" ? "Marcus (Interviewer)" : State.candidateName + " (Candidate)";
+    var sender = m.sender === "marcus" ? interviewer + " (Interviewer)" : State.candidateName + " (Candidate)";
     html += "<div class='msg " + cls + "'><div class='sender'>" + sender + "</div>" + m.text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</div>";
   });
   html += "</body></html>";

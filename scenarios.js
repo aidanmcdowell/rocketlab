@@ -1,76 +1,95 @@
-﻿const SCENARIOS = {
+const SCENARIOS = {
   scenario_a: {
     id: "scenario_a",
-    label: "Scenario A",
-    title: "Telemetry Stream Aggregation & Outlier Detection",
+    label: "Scenario 1",
+    title: "Telemetry Anomaly & Aggregation Filter",
     icon: "📡",
     difficulty: "Medium",
-    tags: ["Rolling Window", "Statistics", "Streaming"],
-    openingPrompt: `Hi, great to finally meet you. I'm Marcus — Lead Ground Software Engineer here at Rocket Lab. Thanks for coming in.\n\nWe'll be working through a problem directly relevant to our satellite pass processing pipeline. I want you to write a Python function called process_telemetry(packets, thresholds).\n\nContext: our ground stations receive batches of raw sensor packets — voltage, temperature, pressure — from the vehicle during a pass:\n\n  packets = [\n    {'subsystem': 'battery', 'value': 28.2, 'status': 'OK'},\n    {'subsystem': 'battery', 'value': None, 'status': 'ERROR'},\n    {'subsystem': 'battery', 'value': 34.5, 'status': 'OK'},\n    {'subsystem': 'avionics', 'value': 12.0, 'status': 'OK'}\n  ]\n  thresholds = {'battery': 30.0, 'avionics': 15.0}\n\nYour function should: filter out corrupted packets, calculate the rolling max and average per subsystem, and flag any subsystem where any reading exceeds its safe threshold.\n\nBefore you start typing — take a moment. What questions do you have about the input, the output format, or the edge cases I'd want handled?`,
-    starterCode: `def process_telemetry(packets, thresholds):
+    tags: ["Data Parsing", "Edge Cases", "Statistics"],
+    interviewer: "Anh Thai",
+    interviewerRole: "Ground Software Engineer",
+    openingPrompt: `Hi ${""}, great to meet you. I'm Anh — Ground Software Engineer here at Rocket Lab. Thanks for coming in.\n\nWe'll be working through a problem directly from our satellite pass processing pipeline. I want you to write a Python function called process_bus_telemetry(packets).\n\nContext: during a ground station pass, our receivers ingest batches of raw sensor packets from the vehicle's 2nd stage avionics bus:\n\n  packets = [\n    {"subsystem": "avionics", "voltage": 28.4, "status": "OK"},\n    {"subsystem": "avionics", "voltage": None, "status": "ERROR"},\n    {"subsystem": "payload", "voltage": 33.1, "status": "OK"},\n    {"subsystem": "avionics", "voltage": 28.6, "status": "OK"}\n  ]\n\nYour function should:\n  1. Skip corrupt/missing records (None voltage or status != "OK")\n  2. Calculate the maximum and average voltage per subsystem\n  3. Flag any subsystem whose average exceeds 32.0V\n\nBefore you start typing — take a moment. What questions do you have about the input format, the output structure, or edge cases I'd want handled?`,
+    starterCode: `def process_bus_telemetry(packets):
     """
-    Process telemetry packets from ground station receiver.
+    Process telemetry packets from the 2nd stage avionics bus.
     
     Args:
-        packets: List of dicts with keys: subsystem, value, status
-        thresholds: Dict mapping subsystem name to max safe value
+        packets: List of dicts with keys: subsystem, voltage, status
     
     Returns:
-        Dict keyed by subsystem with: max, avg, alert, count
+        Dict keyed by subsystem with: max, avg, count, flagged
+        Flag subsystems whose average voltage exceeds 32.0V.
     """
     # TODO: Implement parsing, filtering, and metric calculation
     pass
 
 
 # Test your implementation:
-test_data = [
-    {'subsystem': 'battery', 'value': 28.2, 'status': 'OK'},
-    {'subsystem': 'battery', 'value': None, 'status': 'ERROR'},
-    {'subsystem': 'battery', 'value': 34.5, 'status': 'OK'},
-    {'subsystem': 'avionics', 'value': 12.0, 'status': 'OK'}
+data = [
+    {"subsystem": "avionics", "voltage": 28.4, "status": "OK"},
+    {"subsystem": "avionics", "voltage": None, "status": "ERROR"},
+    {"subsystem": "payload", "voltage": 33.1, "status": "OK"},
+    {"subsystem": "avionics", "voltage": 28.6, "status": "OK"}
 ]
-thresholds = {'battery': 30.0, 'avionics': 15.0}
-result = process_telemetry(test_data, thresholds)
+result = process_bus_telemetry(data)
 print(result)`,
     testHarness: `import traceback
 
 def run_tests():
     results = []
+    # Test 1: Basic filtering & metrics
     try:
-        packets = [
-            {'subsystem': 'battery', 'value': 28.2, 'status': 'OK'},
-            {'subsystem': 'battery', 'value': None, 'status': 'ERROR'},
-            {'subsystem': 'battery', 'value': 34.5, 'status': 'OK'},
-            {'subsystem': 'avionics', 'value': 12.0, 'status': 'OK'}
+        data = [
+            {"subsystem": "avionics", "voltage": 28.4, "status": "OK"},
+            {"subsystem": "avionics", "voltage": None, "status": "ERROR"},
+            {"subsystem": "payload", "voltage": 33.1, "status": "OK"},
+            {"subsystem": "avionics", "voltage": 28.6, "status": "OK"}
         ]
-        thresholds = {'battery': 30.0, 'avionics': 15.0}
-        res = process_telemetry(packets, thresholds)
-        assert res['battery']['max'] == 34.5
-        assert abs(res['battery']['avg'] - 31.35) < 0.01
-        assert res['battery']['alert'] == True
-        assert res['avionics']['alert'] == False
+        result = process_bus_telemetry(data)
+        assert result["avionics"]["max"] == 28.6, f"Expected max 28.6, got {result['avionics']['max']}"
+        assert abs(result["avionics"]["avg"] - 28.5) < 0.01, f"Expected avg ~28.5, got {result['avionics']['avg']}"
+        assert result["avionics"]["flagged"] == False, "avionics should not be flagged"
+        assert result["payload"]["flagged"] == True, "payload avg 33.1 > 32.0, should be flagged"
         results.append(("Test 1 (Basic filtering & metrics)", True, ""))
     except Exception as e:
         results.append(("Test 1 (Basic filtering & metrics)", False, str(e)))
+
+    # Test 2: All-corrupt packets
     try:
-        packets = [{'subsystem': 'battery', 'value': None, 'status': 'ERROR'}]
-        res = process_telemetry(packets, {'battery': 30.0})
-        assert res.get('battery', {}).get('count', 0) == 0 or 'battery' not in res
+        data = [
+            {"subsystem": "avionics", "voltage": None, "status": "ERROR"},
+            {"subsystem": "avionics", "voltage": None, "status": "ERROR"}
+        ]
+        result = process_bus_telemetry(data)
+        assert isinstance(result, dict), "Should return a dict"
+        # Either avionics not present or has count 0
+        if "avionics" in result:
+            assert result["avionics"].get("count", 0) == 0
         results.append(("Test 2 (All-corrupt packets)", True, ""))
     except Exception as e:
         results.append(("Test 2 (All-corrupt packets)", False, str(e)))
+
+    # Test 3: Missing subsystem key in packet
     try:
-        packets = [{'subsystem': 'thruster', 'value': 99.9, 'status': 'OK'}]
-        res = process_telemetry(packets, {'battery': 30.0})
-        results.append(("Test 3 (Unknown subsystem)", True, ""))
+        data = [
+            {"voltage": 28.0, "status": "OK"},
+            {"subsystem": "avionics", "voltage": 28.0, "status": "OK"}
+        ]
+        result = process_bus_telemetry(data)
+        assert isinstance(result, dict), "Should handle missing keys gracefully"
+        results.append(("Test 3 (Missing subsystem key)", True, ""))
     except Exception as e:
-        results.append(("Test 3 (Unknown subsystem)", False, str(e)))
+        results.append(("Test 3 (Missing subsystem key)", False, str(e)))
+
+    # Test 4: Empty input
     try:
-        res = process_telemetry([], {})
-        assert isinstance(res, dict)
+        result = process_bus_telemetry([])
+        assert isinstance(result, dict), "Should return empty dict for empty input"
+        assert len(result) == 0, f"Expected empty dict, got {result}"
         results.append(("Test 4 (Empty input)", True, ""))
     except Exception as e:
         results.append(("Test 4 (Empty input)", False, str(e)))
+
     return results
 
 test_results = run_tests()
@@ -82,354 +101,384 @@ passed_count = sum(1 for _, p, _ in test_results if p)
 print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
 if passed_count == len(test_results):
     print("ALL_TESTS_PASSED")`,
-    curveball: "Nice. That passes the baseline suite. Real-world constraint: this data is now streaming at 50,000 packets per second over a 12-minute orbital pass. Memory usage — if you're storing all packets in a list before processing, what happens after 36 million entries? How would you restructure this so memory stays constant regardless of pass duration?",
+    curveball: "Nice work — that passes the baseline. Real-world constraint: this data is now streaming at 100,000 packets per second over a 12-minute orbital pass. If you're storing all packets in a list before processing, what happens after 72 million entries? How would you restructure this so memory stays constant regardless of pass duration?",
+    interruptions: [
+      {
+        triggerMinute: 10,
+        message: "Anh: 'Quick check before you finish — what happens if one of those voltage values arrives as a string instead of a number? Like \"28.4\" as a string?'",
+        type: "edge-case"
+      },
+      {
+        triggerMinute: 18,
+        message: "Anh: 'That works for our sample data. If this stream scales to 100,000 packets per second, what would be the bottleneck in your current approach?'",
+        type: "performance"
+      }
+    ],
     hints: [
-      "Before the loop — what does the output structure need to look like? If I call result['battery']['max'], what type should result be?",
-      "Corrupted packets: what two things can make a packet invalid? The status field and the value field. How do you safely check both without a KeyError?",
-      "Start with: for packet in packets: — filter out anything where status != 'OK' or value is None. Get that working before aggregation.",
+      "Before the loop — what does the output structure need to look like? If I call result['avionics']['max'], what type should result be?",
+      "Corrupted packets: what two things can make a packet invalid? The status field and the voltage field. How do you safely check both without a KeyError?",
+      "Start with: for packet in packets: — filter out anything where status != 'OK' or voltage is None. Get that working before aggregation.",
       "For rolling max and avg: you don't need to store all values. Just running sum, count, and current max. Three variables per subsystem."
     ],
     evaluationRubric: {
-      defensive: ["Handles None values", "Handles missing keys with .get()", "Handles empty packet list", "Handles unknown subsystems"],
-      domain: ["Groups by subsystem", "Computes max and avg correctly", "Flags threshold violations", "Addresses streaming/memory concern"],
-      pythonic: ["Uses .get() for safe key access", "List comprehension or dict grouping", "No unnecessary nested loops", "Clean function signature"],
+      defensive: ["Handles None voltage values", "Uses .get() for safe key access", "Handles empty packet list", "Handles missing subsystem key"],
+      domain: ["Groups metrics by subsystem", "Computes max and avg correctly", "Flags threshold violations", "Addresses streaming/memory concern"],
+      pythonic: ["Uses .get() for safe key access", "Dict comprehension or clean grouping", "No unnecessary nested loops", "Clean function structure"],
       communication: ["Asked about output format", "Asked about error handling", "Explained approach before coding", "Talked through logic during implementation"]
     }
   },
+
   scenario_b: {
     id: "scenario_b",
-    label: "Scenario B",
-    title: "Binary Telemetry Frame Unpacking",
-    icon: "🔢",
-    difficulty: "Hard",
-    tags: ["struct", "Binary Protocol", "UDP"],
-    openingPrompt: `Good to meet you. I'm Marcus, Ground Software lead at Rocket Lab.\n\nToday is about binary telemetry parsing — we deal with this constantly on the ground side. Our spacecraft downlinks raw binary frames over UDP — we avoid JSON to minimize bandwidth during a pass.\n\nEach frame layout (11 bytes total):\n  Bytes 0-1:  Sync header (must equal 0xDEAD, big-endian)\n  Bytes 2-5:  Timestamp (4-byte big-endian uint32, seconds since epoch)\n  Bytes 6-7:  Sensor value 1 (16-bit big-endian signed int)\n  Bytes 8-9:  Sensor value 2 (16-bit big-endian signed int)\n  Byte 10:    Checksum (XOR of bytes 0-9)\n\nYour task: write decode_frame(raw_bytes) — validate the sync header, unpack the fields, verify the checksum, and return a dict. Return None if the frame is invalid.\n\nWhat are your first questions?`,
-    starterCode: `import struct
-
-def decode_frame(raw_bytes):
-    """
-    Decode a binary telemetry frame from spacecraft downlink.
-    
-    Frame layout (11 bytes total):
-      [0:2]  - Sync header: 0xDEAD (big-endian uint16)
-      [2:6]  - Timestamp: big-endian uint32 (seconds since epoch)
-      [6:8]  - Sensor 1: big-endian int16
-      [8:10] - Sensor 2: big-endian int16
-      [10]   - Checksum: XOR of bytes 0-9
-    
-    Returns dict on success, None on invalid frame.
-    """
-    # TODO: Implement frame decoding
-    pass
-
-
-# Build a test frame to verify:
-import struct
-payload = struct.pack('>HIhh', 0xDEAD, 1727654400, 1234, -50)
-checksum = 0
-for b in payload:
-    checksum ^= b
-test_frame = payload + bytes([checksum])
-print(f"Test frame hex: {test_frame.hex()}")
-result = decode_frame(test_frame)
-print(f"Decoded: {result}")`,
-    testHarness: `import struct
-
-def make_frame(sync, timestamp, s1, s2, corrupt_checksum=False):
-    payload = struct.pack('>HIhh', sync, timestamp, s1, s2)
-    checksum = 0
-    for b in payload:
-        checksum ^= b
-    if corrupt_checksum:
-        checksum ^= 0xFF
-    return payload + bytes([checksum])
-
-def run_tests():
-    results = []
-    try:
-        frame = make_frame(0xDEAD, 1727654400, 1234, -50)
-        result = decode_frame(frame)
-        assert result is not None
-        assert result['timestamp'] == 1727654400
-        assert result['sensor1'] == 1234
-        assert result['sensor2'] == -50
-        results.append(("Test 1 (Valid frame decode)", True, ""))
-    except Exception as e:
-        results.append(("Test 1 (Valid frame decode)", False, str(e)))
-    try:
-        frame = make_frame(0xBEEF, 1727654400, 100, 200)
-        result = decode_frame(frame)
-        assert result is None
-        results.append(("Test 2 (Bad sync header)", True, ""))
-    except Exception as e:
-        results.append(("Test 2 (Bad sync header)", False, str(e)))
-    try:
-        frame = make_frame(0xDEAD, 1727654400, 500, 300, corrupt_checksum=True)
-        result = decode_frame(frame)
-        assert result is None
-        results.append(("Test 3 (Corrupted checksum)", True, ""))
-    except Exception as e:
-        results.append(("Test 3 (Corrupted checksum)", False, str(e)))
-    try:
-        frame = bytes([0xDE, 0xAD, 0x00])
-        result = decode_frame(frame)
-        assert result is None
-        results.append(("Test 4 (Truncated frame)", True, ""))
-    except Exception as e:
-        results.append(("Test 4 (Truncated frame)", False, str(e)))
-    try:
-        result = decode_frame(b'')
-        assert result is None
-        results.append(("Test 5 (Empty input)", True, ""))
-    except Exception as e:
-        results.append(("Test 5 (Empty input)", False, str(e)))
-    return results
-
-test_results = run_tests()
-for name, passed, msg in test_results:
-    icon = "PASS" if passed else "FAIL"
-    print(f"[{icon}] {name}" + (f": {msg}" if msg else ""))
-
-passed_count = sum(1 for _, p, _ in test_results if p)
-print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
-if passed_count == len(test_results):
-    print("ALL_TESTS_PASSED")`,
-    curveball: "Good. Field scenario: UDP datagrams sometimes arrive fragmented. Your decode_frame receives 5 bytes in one call, then 6 bytes in the next — partial frames. How do you modify the system to handle split frames across chunk boundaries? Think about a reassembly buffer.",
-    hints: [
-      "What does struct.unpack need? A format string and bytes. The '>' prefix means big-endian. What format characters cover uint16, uint32, and signed int16?",
-      "Check frame length before unpacking — if len(raw_bytes) < 11, return None immediately. That's your first guard.",
-      "For the checksum: XOR all bytes 0 through 9, compare to byte 10. A simple loop works: checksum = 0; for b in raw_bytes[:10]: checksum ^= b",
-      "Build the struct format: '>HIhh' — big-endian, unsigned short (sync), unsigned int (timestamp), signed short x2 (sensors)."
-    ],
-    evaluationRubric: {
-      defensive: ["Checks frame length before unpacking", "Validates sync header == 0xDEAD", "Verifies checksum byte", "Returns None on any invalid condition"],
-      domain: ["Uses struct.unpack correctly", "Handles big-endian byte order", "Understands XOR checksum", "Addresses partial frame reassembly"],
-      pythonic: ["Appropriate use of struct format strings", "Concise checksum computation", "Clear variable naming for byte fields", "Exception handling around struct.unpack"],
-      communication: ["Asked about frame length guarantee", "Asked about error return format", "Explained byte order reasoning", "Described checksum algorithm before implementing"]
-    }
-  },
-  scenario_c: {
-    id: "scenario_c",
-    label: "Scenario C",
-    title: "Async Command & Telemetry Queue",
-    icon: "⚡",
-    difficulty: "Hard",
-    tags: ["asyncio", "Priority Queue", "Concurrency"],
-    openingPrompt: `Hey, I'm Marcus. Let's get into it.\n\nThis is about concurrent ground-to-vehicle communication — something our mission control software handles constantly during a live pass.\n\nYou need to implement an async command dispatcher using Python's asyncio. Ground software must simultaneously receive live telemetry while dispatching commands to the vehicle through a simulated socket.\n\nCommands arrive in a priority queue:\n  Priority 0: CRITICAL_ABORT — must go out immediately\n  Priority 1: HIGH_PRIORITY\n  Priority 2: ROUTINE_PING\n\nThe simulated socket is just an async function that can timeout. Your dispatcher should:\n  1. Pull commands from the queue in priority order\n  2. Retry up to 3 times with exponential backoff on timeout\n  3. Log each send attempt\n\nWhat questions do you have before you start?`,
-    starterCode: `import asyncio
-import heapq
-import time
-
-# Simulated socket - randomly times out
-async def simulated_socket_send(command: str) -> bool:
-    """Returns True on success, raises asyncio.TimeoutError on failure."""
-    import random
-    await asyncio.sleep(random.uniform(0.01, 0.05))
-    if random.random() < 0.3:  # 30% failure rate
-        raise asyncio.TimeoutError(f"Socket timeout sending {command}")
-    return True
-
-class CommandDispatcher:
-    def __init__(self):
-        self.queue = []  # Priority queue: (priority, timestamp, command)
-        self.sent = []
-        self.failed = []
-    
-    def enqueue(self, priority: int, command: str):
-        """Add a command to the priority queue."""
-        # TODO: Implement
-        pass
-    
-    async def dispatch_one(self, command: str, max_retries: int = 3) -> bool:
-        """Send a single command with retry/backoff logic."""
-        # TODO: Implement exponential backoff retry
-        pass
-    
-    async def run(self, duration_seconds: float = 2.0):
-        """Process queue for given duration."""
-        # TODO: Drain the priority queue, dispatch commands
-        pass
-
-
-# Test scaffold:
-async def main():
-    dispatcher = CommandDispatcher()
-    dispatcher.enqueue(2, "ROUTINE_PING")
-    dispatcher.enqueue(0, "CRITICAL_ABORT")
-    dispatcher.enqueue(1, "HIGH_PRIORITY_UPLINK")
-    dispatcher.enqueue(2, "ROUTINE_PING_2")
-    
-    await dispatcher.run(duration_seconds=5.0)
-    print(f"Sent: {dispatcher.sent}")
-    print(f"Failed: {dispatcher.failed}")
-
-asyncio.run(main())`,
-    testHarness: `import asyncio
-import heapq
-
-async def run_tests():
-    results = []
-    try:
-        dispatcher = CommandDispatcher()
-        dispatcher.enqueue(2, "LOW")
-        dispatcher.enqueue(0, "CRITICAL")
-        dispatcher.enqueue(1, "HIGH")
-        order = []
-        while dispatcher.queue:
-            priority, ts, cmd = heapq.heappop(dispatcher.queue)
-            order.append((priority, cmd))
-        assert order[0][1] == "CRITICAL", f"CRITICAL should be first, got {order[0][1]}"
-        assert order[1][1] == "HIGH", f"HIGH should be second, got {order[1][1]}"
-        results.append(("Test 1 (Priority ordering)", True, ""))
-    except Exception as e:
-        results.append(("Test 1 (Priority ordering)", False, str(e)))
-    try:
-        attempt_count = [0]
-        async def counting_fail(cmd):
-            attempt_count[0] += 1
-            raise asyncio.TimeoutError("Test timeout")
-        global simulated_socket_send
-        old_socket = simulated_socket_send
-        simulated_socket_send = counting_fail
-        dispatcher2 = CommandDispatcher()
-        dispatcher2.enqueue(0, "TEST_CMD")
-        await dispatcher2.run(duration_seconds=2.0)
-        simulated_socket_send = old_socket
-        assert "TEST_CMD" in dispatcher2.failed, "Failed command should be logged"
-        results.append(("Test 2 (Retry + failure logging)", True, ""))
-    except Exception as e:
-        results.append(("Test 2 (Retry + failure logging)", False, str(e)))
-    try:
-        async def always_succeed(cmd):
-            return True
-        global simulated_socket_send
-        old_socket = simulated_socket_send
-        simulated_socket_send = always_succeed
-        dispatcher3 = CommandDispatcher()
-        dispatcher3.enqueue(0, "SUCCESS_CMD")
-        await dispatcher3.run(duration_seconds=1.0)
-        simulated_socket_send = old_socket
-        assert "SUCCESS_CMD" in dispatcher3.sent
-        results.append(("Test 3 (Success logging)", True, ""))
-    except Exception as e:
-        results.append(("Test 3 (Success logging)", False, str(e)))
-    return results
-
-test_results = asyncio.run(run_tests())
-for name, passed, msg in test_results:
-    icon = "PASS" if passed else "FAIL"
-    print(f"[{icon}] {name}" + (f": {msg}" if msg else ""))
-passed_count = sum(1 for _, p, _ in test_results if p)
-print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
-if passed_count == len(test_results):
-    print("ALL_TESTS_PASSED")`,
-    curveball: "Solid. Wrinkle: the queue gets flooded — 500 commands backed up during an outage. When the socket recovers, we can't blast all 500 at once or we'll saturate the RF uplink. How do you add rate limiting — max 10 commands per second — without blocking telemetry ingestion on a concurrent async task?",
-    hints: [
-      "Start with enqueue: heapq.heappush(self.queue, (priority, time.time(), command)). Why include the timestamp? Tie-breaking when two commands share the same priority.",
-      "For dispatch_one: for attempt in range(max_retries): — try await simulated_socket_send(command). Catch asyncio.TimeoutError. On failure, wait 2**attempt seconds before retrying.",
-      "Your run method: while self.queue and time.time() < deadline: — pop from the heap, dispatch, continue. asyncio.sleep(0) inside the loop yields control to other coroutines.",
-      "Exponential backoff: await asyncio.sleep(2 ** attempt) — attempt 0 waits 1s, attempt 1 waits 2s, attempt 2 waits 4s."
-    ],
-    evaluationRubric: {
-      defensive: ["Handles TimeoutError gracefully", "Logs failed commands after max retries", "Handles empty queue gracefully", "Uses try/except around async socket call"],
-      domain: ["Uses heapq for priority ordering", "Implements exponential backoff", "Uses asyncio correctly", "Addresses rate limiting concern"],
-      pythonic: ["Uses heapq.heappush/heappop correctly", "Async/await syntax clean", "Avoids blocking calls inside async context", "Clear separation of enqueue/dispatch/run"],
-      communication: ["Asked about retry count", "Asked about priority tie-breaking", "Explained backoff strategy before coding", "Discussed rate limiting tradeoffs"]
-    }
-  },
-  scenario_d: {
-    id: "scenario_d",
-    label: "Scenario D",
-    title: "Missing-Data Forward Fill & State Snapshot",
-    icon: "🛰️",
+    label: "Scenario 2",
+    title: "Ground Station Pass Window Merging",
+    icon: "🌍",
     difficulty: "Medium",
-    tags: ["Data Merging", "Forward Fill", "State Machine"],
-    openingPrompt: `Hi, I'm Marcus. Good to have you in.\n\nThis is about mission state reconstruction — operators need the complete spacecraft state at any given second, even if subsystems transmit at different rates.\n\nWe have two data streams:\n  battery_stream: transmits every 1 second\n  attitude_stream: transmits every 5 seconds\n\nWe need build_snapshot(battery_stream, attitude_stream, duration) to merge these into a unified per-second state table.\n\nInput format:\n  battery_stream = [(0, 28.0), (1, 28.1), (2, 28.3), ...]  # (second, value)\n  attitude_stream = [(0, 0.5), (5, 0.7), (10, 0.9), ...]   # (second, value)\n\nOutput: list of dicts: [{'second': 0, 'battery': 28.0, 'attitude': 0.5}, ...]\n\nIf a subsystem hasn't sent a new reading, hold the last known value (forward-fill). If a sensor silently stops transmitting, hold its last known value until the end.\n\nWhat do you want to clarify before you code?`,
-    starterCode: `def build_snapshot(battery_stream, attitude_stream, duration):
+    tags: ["Intervals", "Sorting", "Merging"],
+    interviewer: "Anh Thai",
+    interviewerRole: "Ground Software Engineer",
+    openingPrompt: `Hi, I'm Anh — Ground Software Engineer at Rocket Lab. Good to meet you.\n\nToday's problem comes straight from our ground station scheduling system. We operate tracking antennas in New Zealand, Wallops Island, and Long Beach. During a satellite pass, we get overlapping visibility windows from different antennas.\n\nI want you to write a function merge_passes(intervals) that takes a list of [start, end] UTC minute integers and merges all overlapping contact windows into continuous blocks.\n\nExample:\n  Input:  [[10, 14], [12, 18], [20, 25]]\n  Output: [[10, 18], [20, 25]]\n\nThe intervals might arrive unsorted, and could be empty. Adjacent intervals like [1, 5] and [6, 10] are NOT overlapping — they're separate passes.\n\nBefore you code — what questions do you have about the format, edge cases, or expected behavior?`,
+    starterCode: `def merge_passes(intervals):
     """
-    Merge multi-rate telemetry streams into unified per-second snapshots.
+    Merge overlapping ground station contact windows.
     
     Args:
-        battery_stream: List of (second, value) tuples, 1Hz
-        attitude_stream: List of (second, value) tuples, 0.2Hz (every 5s)
-        duration: Total snapshot duration in seconds
+        intervals: List of [start, end] UTC minute integers
     
     Returns:
-        List of dicts: [{'second': t, 'battery': v, 'attitude': v}, ...]
-        Forward-fill missing values from last known reading.
-        Seconds before first reading should have None for that subsystem.
+        List of merged [start, end] intervals, sorted by start time.
+        Adjacent but non-overlapping intervals remain separate.
     """
-    # TODO: Implement forward-fill merge
+    # TODO: Implement interval merging
     pass
 
 
 # Test your implementation:
-battery = [(0, 28.0), (1, 28.1), (2, 28.3), (3, 28.2), (4, 28.4)]
-attitude = [(0, 0.5), (5, 0.7)]
-
-result = build_snapshot(battery, attitude, duration=10)
-for row in result:
-    print(row)`,
+print(merge_passes([[10, 14], [12, 18], [20, 25]]))  # [[10, 18], [20, 25]]
+print(merge_passes([]))                                # []
+print(merge_passes([[1, 5], [6, 10]]))                 # [[1, 5], [6, 10]]`,
     testHarness: `def run_tests():
     results = []
+
+    # Test 1: Basic overlapping merge
     try:
-        battery = [(0, 28.0), (1, 28.5), (2, 29.0)]
-        attitude = [(0, 0.5), (5, 0.7)]
-        result = build_snapshot(battery, attitude, duration=6)
-        assert len(result) == 6
-        assert result[0]['battery'] == 28.0
-        assert result[0]['attitude'] == 0.5
-        assert result[3]['attitude'] == 0.5
-        assert result[5]['attitude'] == 0.7
-        results.append(("Test 1 (Basic forward fill)", True, ""))
+        result = merge_passes([[10, 14], [12, 18], [20, 25]])
+        assert result == [[10, 18], [20, 25]], f"Expected [[10, 18], [20, 25]], got {result}"
+        results.append(("Test 1 (Basic overlapping merge)", True, ""))
     except Exception as e:
-        results.append(("Test 1 (Basic forward fill)", False, str(e)))
+        results.append(("Test 1 (Basic overlapping merge)", False, str(e)))
+
+    # Test 2: Empty input
     try:
-        battery = [(0, 28.0), (1, 28.1)]
-        attitude = [(0, 0.5)]
-        result = build_snapshot(battery, attitude, duration=5)
-        assert result[4]['battery'] == 28.1
-        results.append(("Test 2 (Silent sensor forward-fill)", True, ""))
+        result = merge_passes([])
+        assert result == [], f"Expected [], got {result}"
+        results.append(("Test 2 (Empty input)", True, ""))
     except Exception as e:
-        results.append(("Test 2 (Silent sensor forward-fill)", False, str(e)))
+        results.append(("Test 2 (Empty input)", False, str(e)))
+
+    # Test 3: Adjacent but non-overlapping
     try:
-        battery = [(2, 28.0)]
-        attitude = [(0, 0.5)]
-        result = build_snapshot(battery, attitude, duration=5)
-        assert result[0].get('battery') is None
-        assert result[2]['battery'] == 28.0
-        results.append(("Test 3 (None before first reading)", True, ""))
+        result = merge_passes([[1, 5], [6, 10]])
+        assert result == [[1, 5], [6, 10]], f"Expected [[1, 5], [6, 10]], got {result}"
+        results.append(("Test 3 (Adjacent non-overlapping)", True, ""))
     except Exception as e:
-        results.append(("Test 3 (None before first reading)", False, str(e)))
+        results.append(("Test 3 (Adjacent non-overlapping)", False, str(e)))
+
+    # Test 4: Unsorted input with multiple merges
     try:
-        result = build_snapshot([], [], duration=3)
-        assert len(result) == 3
-        assert all(r.get('battery') is None for r in result)
-        results.append(("Test 4 (Empty streams)", True, ""))
+        result = merge_passes([[20, 25], [1, 3], [2, 7], [15, 22]])
+        assert result == [[1, 7], [15, 25]], f"Expected [[1, 7], [15, 25]], got {result}"
+        results.append(("Test 4 (Unsorted with multiple merges)", True, ""))
     except Exception as e:
-        results.append(("Test 4 (Empty streams)", False, str(e)))
+        results.append(("Test 4 (Unsorted with multiple merges)", False, str(e)))
+
+    # Test 5: Single interval
+    try:
+        result = merge_passes([[5, 10]])
+        assert result == [[5, 10]], f"Expected [[5, 10]], got {result}"
+        results.append(("Test 5 (Single interval)", True, ""))
+    except Exception as e:
+        results.append(("Test 5 (Single interval)", False, str(e)))
+
     return results
 
 test_results = run_tests()
 for name, passed, msg in test_results:
     icon = "PASS" if passed else "FAIL"
     print(f"[{icon}] {name}" + (f": {msg}" if msg else ""))
+
 passed_count = sum(1 for _, p, _ in test_results if p)
 print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
 if passed_count == len(test_results):
     print("ALL_TESTS_PASSED")`,
-    curveball: "Good. Hard part: the attitude sensor silently stops at t=47s, but we get no disconnect packet — it just goes quiet. Operators are reading the forward-filled t=45 value and trusting it. How do you add a staleness threshold — mark a value STALE if it hasn't updated in more than 10 seconds — without changing the return format for valid data?",
+    curveball: "Good — that handles the sorted case. Real scenario: what if the input contains windows where the end time is before the start time (corrupted data from an antenna controller reboot)? And what if two windows share the exact same start and end? How does your code handle those?",
+    interruptions: [
+      {
+        triggerMinute: 10,
+        message: "Anh: 'Quick check — what happens if one of those interval values arrives as a string instead of an integer? Like [\"10\", 14]?'",
+        type: "edge-case"
+      },
+      {
+        triggerMinute: 18,
+        message: "Anh: 'That works for our sample data. If we're merging 50,000 contact windows across a constellation of 300 satellites, what's the time complexity of your approach?'",
+        type: "performance"
+      }
+    ],
     hints: [
-      "First, convert each stream into a dict keyed by second for O(1) lookup: {t: v for t, v in battery_stream}. Then iterate for t in range(duration):",
-      "Track two 'last seen' variables initialized to None. At each second t, check if t is in the battery dict; if so, update last_battery. Then append the row.",
-      "Classic forward-fill: last_battery = battery_lookup.get(t, last_battery) — one line handles both update and hold.",
-      "For staleness: also track last_battery_time. When appending, check if t - last_battery_time > threshold and mark accordingly. Discuss the tradeoff before changing return type."
+      "First step: sort the intervals by start time. In Python: intervals.sort() or sorted(intervals). Why does sorting matter here?",
+      "Initialize a result list with the first interval. Then loop through the rest: if the current interval overlaps with the last merged one, extend the end. Otherwise, append a new interval.",
+      "Overlap condition: current_start <= previous_end. If true, merge by updating previous_end = max(previous_end, current_end).",
+      "Don't forget to handle the empty list case at the top — return [] immediately."
     ],
     evaluationRubric: {
-      defensive: ["Handles empty streams", "Handles None before first reading", "Handles sensors that stop mid-mission", "Handles streams with missing seconds"],
-      domain: ["Correct forward-fill logic", "Correct per-second iteration", "Addresses staleness concern", "Understands multi-rate sensor fusion"],
-      pythonic: ["Uses dict lookup for O(1) stream access", "Single-pass iteration", "Clean variable naming", "Efficient memory usage"],
-      communication: ["Asked about behavior before first reading", "Asked about staleness handling", "Explained forward-fill concept verbally", "Discussed tradeoffs of stale data"]
+      defensive: ["Handles empty input list", "Handles unsorted input", "Handles single interval", "Handles duplicate/identical intervals"],
+      domain: ["Sorts by start time first", "Correct overlap detection", "Uses max() for end time merge", "Addresses scaling concern"],
+      pythonic: ["Uses sorted() or .sort()", "Clean loop structure", "Avoids unnecessary copies", "Clear variable naming"],
+      communication: ["Asked about sort guarantee", "Asked about overlap definition", "Explained merge strategy", "Discussed time complexity"]
+    }
+  },
+
+  scenario_c: {
+    id: "scenario_c",
+    label: "Scenario 3",
+    title: "Uplink Command Rate Limiter",
+    icon: "⚡",
+    difficulty: "Medium",
+    tags: ["Sliding Window", "Deque", "OOP"],
+    interviewer: "Anh Thai",
+    interviewerRole: "Ground Software Engineer",
+    openingPrompt: `Hey, I'm Anh. Good to have you in.\n\nThis is about uplink command throttling — a real constraint in our ground-to-vehicle communication system. Spacecraft transceivers can only process a limited number of commands within any time window before they overheat or drop packets.\n\nI want you to implement a class CommandLimiter with:\n  - __init__(self, max_cmds: int, window_sec: int) — configures the limiter\n  - allow_command(self, timestamp: float) -> bool — returns True if the command is permitted, False if it should be dropped\n\nThe rule: at most max_cmds commands are allowed within any rolling window of window_sec seconds.\n\nExample:\n  limiter = CommandLimiter(max_cmds=2, window_sec=5)\n  limiter.allow_command(1.0)  # True  — 1st command\n  limiter.allow_command(2.0)  # True  — 2nd command\n  limiter.allow_command(3.0)  # False — 2 commands already within [1.0, 6.0)\n  limiter.allow_command(6.5)  # True  — 1.0 has expired (6.5 - 5 = 1.5)\n\nWhat questions do you have before you start?`,
+    starterCode: `class CommandLimiter:
+    """
+    Rate limiter for spacecraft uplink commands.
+    
+    Allows at most max_cmds commands within any rolling
+    window of window_sec seconds.
+    """
+    def __init__(self, max_cmds: int, window_sec: int):
+        # TODO: Initialize state
+        pass
+
+    def allow_command(self, timestamp: float) -> bool:
+        """
+        Check if a command at this timestamp is permitted.
+        Returns True if allowed, False if rate-limited.
+        """
+        # TODO: Implement sliding window check
+        pass
+
+
+# Test your implementation:
+limiter = CommandLimiter(max_cmds=2, window_sec=5)
+print(limiter.allow_command(1.0))   # True
+print(limiter.allow_command(2.0))   # True
+print(limiter.allow_command(3.0))   # False
+print(limiter.allow_command(6.5))   # True`,
+    testHarness: `from collections import deque
+
+def run_tests():
+    results = []
+
+    # Test 1: Basic rate limiting
+    try:
+        limiter = CommandLimiter(max_cmds=2, window_sec=5)
+        assert limiter.allow_command(1.0) == True, "1st command should be allowed"
+        assert limiter.allow_command(2.0) == True, "2nd command should be allowed"
+        assert limiter.allow_command(3.0) == False, "3rd command within window should be blocked"
+        results.append(("Test 1 (Basic rate limiting)", True, ""))
+    except Exception as e:
+        results.append(("Test 1 (Basic rate limiting)", False, str(e)))
+
+    # Test 2: Window expiry
+    try:
+        limiter = CommandLimiter(max_cmds=2, window_sec=5)
+        limiter.allow_command(1.0)
+        limiter.allow_command(2.0)
+        assert limiter.allow_command(6.5) == True, "1.0 expired (6.5 - 5 = 1.5), should allow"
+        results.append(("Test 2 (Window expiry)", True, ""))
+    except Exception as e:
+        results.append(("Test 2 (Window expiry)", False, str(e)))
+
+    # Test 3: Burst then wait
+    try:
+        limiter = CommandLimiter(max_cmds=3, window_sec=10)
+        assert limiter.allow_command(0.0) == True
+        assert limiter.allow_command(1.0) == True
+        assert limiter.allow_command(2.0) == True
+        assert limiter.allow_command(3.0) == False
+        assert limiter.allow_command(10.5) == True, "0.0 expired at 10.5"
+        results.append(("Test 3 (Burst then wait)", True, ""))
+    except Exception as e:
+        results.append(("Test 3 (Burst then wait)", False, str(e)))
+
+    # Test 4: Single command allowed
+    try:
+        limiter = CommandLimiter(max_cmds=1, window_sec=1)
+        assert limiter.allow_command(0.0) == True
+        assert limiter.allow_command(0.5) == False
+        assert limiter.allow_command(1.1) == True
+        results.append(("Test 4 (Single command window)", True, ""))
+    except Exception as e:
+        results.append(("Test 4 (Single command window)", False, str(e)))
+
+    return results
+
+test_results = run_tests()
+for name, passed, msg in test_results:
+    icon = "PASS" if passed else "FAIL"
+    print(f"[{icon}] {name}" + (f": {msg}" if msg else ""))
+
+passed_count = sum(1 for _, p, _ in test_results if p)
+print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
+if passed_count == len(test_results):
+    print("ALL_TESTS_PASSED")`,
+    curveball: "Solid. Wrinkle: the command queue gets flooded during an anomaly — 500 commands backed up. When the transceiver recovers, we can't blast all 500 at once or we'll saturate the RF uplink. How would you modify this to also enforce a minimum spacing between consecutive commands — say, at least 200ms apart?",
+    interruptions: [
+      {
+        triggerMinute: 10,
+        message: "Anh: 'Quick check — what happens if someone calls allow_command with timestamps that aren't monotonically increasing? Like calling with 5.0 then 3.0?'",
+        type: "edge-case"
+      },
+      {
+        triggerMinute: 18,
+        message: "Anh: 'That works for our sample data. If this limiter is handling 100,000 commands per second across multiple ground stations, what's the memory usage over time? Does it grow unbounded?'",
+        type: "performance"
+      }
+    ],
+    hints: [
+      "Use a collections.deque to store the timestamps of allowed commands. Why deque? O(1) popleft.",
+      "When a new command arrives: first, remove all timestamps from the front of the deque that are older than (timestamp - window_sec).",
+      "After pruning: if len(deque) < max_cmds, append the new timestamp and return True. Otherwise return False.",
+      "Edge case: what if max_cmds is 0? What if window_sec is 0? Guard those at the top."
+    ],
+    evaluationRubric: {
+      defensive: ["Handles edge case of max_cmds=0", "Prunes expired timestamps", "Handles non-monotonic timestamps", "Handles rapid burst correctly"],
+      domain: ["Uses deque or equivalent", "Correct sliding window logic", "O(1) amortized pruning", "Addresses minimum spacing concern"],
+      pythonic: ["Uses collections.deque", "Clean class structure", "Clear method signatures", "Efficient data structure choice"],
+      communication: ["Asked about timestamp ordering", "Asked about edge cases", "Explained sliding window concept", "Discussed memory implications"]
+    }
+  },
+
+  scenario_d: {
+    id: "scenario_d",
+    label: "Scenario 4",
+    title: "Flight State Machine Sequence Validation",
+    icon: "🛰️",
+    difficulty: "Medium",
+    tags: ["State Machine", "Validation", "Dict Mapping"],
+    interviewer: "Anh Thai",
+    interviewerRole: "Ground Software Engineer",
+    openingPrompt: `Hi, I'm Anh. Good to have you in.\n\nThis is about mission state validation — operators at ground control track the rocket through mission stages. The valid sequence is:\n\n  PRE_LAUNCH → BOOST → STAGE_SEP → COAST → PAYLOAD_DEPLOY → MISSION_COMPLETE\n\nTelemetry packets arrive reporting state transitions, but they can be corrupted or out of order. We need to detect illegal transitions.\n\nWrite a function validate_sequence(events) that takes a list of state-change event strings and returns:\n  - {"valid": True, "final_state": "..."} if all transitions are legal\n  - {"valid": False, "error": "Invalid transition from X to Y at index N"} on the first illegal transition\n\nThe first event must be "PRE_LAUNCH". Any other starting state is invalid.\n\nWhat questions do you have before you start coding?`,
+    starterCode: `def validate_sequence(events):
+    """
+    Validate a sequence of flight state transition events.
+    
+    Valid transitions:
+        PRE_LAUNCH -> BOOST
+        BOOST -> STAGE_SEP
+        STAGE_SEP -> COAST
+        COAST -> PAYLOAD_DEPLOY
+        PAYLOAD_DEPLOY -> MISSION_COMPLETE
+    
+    Args:
+        events: List of state name strings
+    
+    Returns:
+        {"valid": True, "final_state": "..."} on success
+        {"valid": False, "error": "..."} on first illegal transition
+    """
+    # TODO: Implement state machine validation
+    pass
+
+
+# Test your implementation:
+print(validate_sequence(["PRE_LAUNCH", "BOOST", "STAGE_SEP"]))
+print(validate_sequence(["PRE_LAUNCH", "STAGE_SEP"]))  # Invalid!
+print(validate_sequence(["BOOST", "STAGE_SEP"]))        # Invalid start!`,
+    testHarness: `def run_tests():
+    results = []
+
+    # Test 1: Valid full sequence
+    try:
+        events = ["PRE_LAUNCH", "BOOST", "STAGE_SEP", "COAST", "PAYLOAD_DEPLOY", "MISSION_COMPLETE"]
+        result = validate_sequence(events)
+        assert result["valid"] == True, f"Full valid sequence should pass, got {result}"
+        assert result["final_state"] == "MISSION_COMPLETE"
+        results.append(("Test 1 (Valid full sequence)", True, ""))
+    except Exception as e:
+        results.append(("Test 1 (Valid full sequence)", False, str(e)))
+
+    # Test 2: Invalid transition mid-sequence
+    try:
+        events = ["PRE_LAUNCH", "BOOST", "PAYLOAD_DEPLOY"]
+        result = validate_sequence(events)
+        assert result["valid"] == False, "BOOST -> PAYLOAD_DEPLOY is invalid"
+        assert "2" in result["error"] or "index" in result["error"].lower(), "Should mention index of failure"
+        results.append(("Test 2 (Invalid transition detected)", True, ""))
+    except Exception as e:
+        results.append(("Test 2 (Invalid transition detected)", False, str(e)))
+
+    # Test 3: Invalid starting state
+    try:
+        events = ["BOOST", "STAGE_SEP"]
+        result = validate_sequence(events)
+        assert result["valid"] == False, "Must start with PRE_LAUNCH"
+        results.append(("Test 3 (Invalid starting state)", True, ""))
+    except Exception as e:
+        results.append(("Test 3 (Invalid starting state)", False, str(e)))
+
+    # Test 4: Empty event list
+    try:
+        result = validate_sequence([])
+        assert result["valid"] == False or isinstance(result, dict), "Empty list should be handled"
+        results.append(("Test 4 (Empty event list)", True, ""))
+    except Exception as e:
+        results.append(("Test 4 (Empty event list)", False, str(e)))
+
+    # Test 5: Unknown state name
+    try:
+        events = ["PRE_LAUNCH", "BOOST", "WARP_DRIVE"]
+        result = validate_sequence(events)
+        assert result["valid"] == False, "Unknown state should be invalid"
+        results.append(("Test 5 (Unknown state name)", True, ""))
+    except Exception as e:
+        results.append(("Test 5 (Unknown state name)", False, str(e)))
+
+    return results
+
+test_results = run_tests()
+for name, passed, msg in test_results:
+    icon = "PASS" if passed else "FAIL"
+    print(f"[{icon}] {name}" + (f": {msg}" if msg else ""))
+
+passed_count = sum(1 for _, p, _ in test_results if p)
+print(f"\\nSCORE: {passed_count}/{len(test_results)} tests passed")
+if passed_count == len(test_results):
+    print("ALL_TESTS_PASSED")`,
+    curveball: "Good. Real scenario: telemetry packets sometimes arrive out of order due to network jitter. The vehicle actually went PRE_LAUNCH → BOOST → STAGE_SEP, but the packets arrive as PRE_LAUNCH → STAGE_SEP → BOOST. How would you handle reordering? Each event has a monotonic sequence number — how would you buffer and sort before validation?",
+    interruptions: [
+      {
+        triggerMinute: 10,
+        message: "Anh: 'Quick check — what happens if an event string has trailing whitespace or different casing? Like \"pre_launch\" instead of \"PRE_LAUNCH\"?'",
+        type: "edge-case"
+      },
+      {
+        triggerMinute: 18,
+        message: "Anh: 'That works for our sample data. If we extend this to handle branching states — like STAGE_SEP can go to either COAST or ABORT — how would you modify the transition map?'",
+        type: "performance"
+      }
+    ],
+    hints: [
+      "Define a dictionary mapping each state to its allowed next state(s): VALID_TRANSITIONS = {'PRE_LAUNCH': ['BOOST'], 'BOOST': ['STAGE_SEP'], ...}",
+      "First check: if the list is empty or events[0] != 'PRE_LAUNCH', return invalid immediately.",
+      "Loop from index 1: check if events[i] is in VALID_TRANSITIONS.get(events[i-1], []). If not, return the error with the index.",
+      "Don't forget: what if a state name isn't in your transitions dict at all? .get() with a default empty list handles that."
+    ],
+    evaluationRubric: {
+      defensive: ["Handles empty event list", "Handles invalid start state", "Handles unknown state names", "Returns error with index info"],
+      domain: ["Correct transition map structure", "Validates first event", "Detects invalid transitions", "Addresses out-of-order events concern"],
+      pythonic: ["Uses dict for transition map", "Uses .get() with default", "Clean loop structure", "Descriptive error messages"],
+      communication: ["Asked about valid transitions", "Asked about error format", "Explained state machine concept", "Discussed branching states"]
     }
   }
 };

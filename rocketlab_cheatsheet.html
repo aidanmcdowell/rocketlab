@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rocket Lab Technical Screen — Aidan McDowell</title>
+<style>
+  html { scroll-behavior: smooth; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #202124;
+    background: #fff;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+    font-size: 10.5pt;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    border-bottom: 3px solid #0b57d0;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .doc-header h1 {
+    color: #0b57d0;
+    font-size: 20pt;
+    margin: 0 0 6px;
+  }
+  .doc-header p { margin: 0; color: #5f6368; font-size: 9.5pt; }
+
+  /* ── HEADINGS ── */
+  h2 {
+    color: #1a73e8;
+    font-size: 14pt;
+    margin: 36px 0 8px;
+    border-bottom: 1px solid #dadce0;
+    padding-bottom: 6px;
+  }
+  h3 { color: #202124; font-size: 11.5pt; margin: 22px 0 6px; }
+
+  /* ── PHASE BOXES ── */
+  .phase-box {
+    background: #f8f9fa;
+    border-left: 5px solid #1a73e8;
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 0 8px 8px 0;
+  }
+  .phase-box.warn  { border-left-color: #f29900; background: #fef9e7; }
+  .phase-box.green { border-left-color: #1e8e3e; background: #f0faf4; }
+  .phase-box.red   { border-left-color: #d93025; background: #fce8e6; }
+
+  .phase-title {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #1a73e8;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+  .phase-box.warn  .phase-title { color: #f29900; }
+  .phase-box.green .phase-title { color: #1e8e3e; }
+  .phase-box.red   .phase-title { color: #d93025; }
+
+  .trigger {
+    background: #e8f0fe;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #174ea6;
+    margin: 8px 0 12px;
+    display: block;
+    font-size: 9.5pt;
+  }
+  .phase-box.warn  .trigger { background: #fef3cd; color: #7c4d00; }
+  .phase-box.red   .trigger { background: #fce8e6; color: #a50e0e; }
+
+  /* ── NAV BUTTONS ── */
+  .nav-btn {
+    display: inline-block;
+    background: #1a73e8;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 9pt;
+    margin: 3px 3px 3px 0;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: #1557b0; }
+  .nav-btn.green { background: #1e8e3e; }
+  .nav-btn.green:hover { background: #166130; }
+  .nav-btn.orange { background: #f29900; color: #fff !important; }
+  .nav-btn.orange:hover { background: #c47d00; }
+
+  .back-btn {
+    display: inline-block;
+    background: #f1f3f4;
+    color: #1a73e8 !important;
+    border: 1px solid #dadce0;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 8.5pt;
+    margin: 4px 3px 14px 0;
+  }
+  .back-btn:hover { background: #e8eaed; }
+
+  .jump-link { color: #1a73e8; font-weight: 600; text-decoration: underline; }
+
+  /* ── QUOTE BOX ── */
+  .quote-box {
+    background: #eef3fc;
+    border-left: 4px solid #1a73e8;
+    padding: 10px 14px;
+    font-style: italic;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 9.5pt;
+  }
+  .quote-box.green { background: #f0faf4; border-left-color: #1e8e3e; }
+
+  /* ── CODE BLOCKS ── */
+  pre, code { font-family: "Consolas", "Courier New", monospace; }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    margin: 10px 0 16px;
+  }
+  .kw  { color: #569cd6; font-weight: bold; }
+  .str { color: #ce9178; }
+  .com { color: #6a9955; font-style: italic; }
+  .fn  { color: #dcdcaa; }
+  .num { color: #b5cea8; }
+  .cls { color: #4ec9b0; }
+
+  /* ── TABLE ── */
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 9.5pt; }
+  th, td { border: 1px solid #dadce0; padding: 9px 12px; text-align: left; }
+  th { background: #f1f3f4; font-weight: 700; }
+  tr:nth-child(even) { background: #f8f9fa; }
+
+  /* ── PILL TAGS ── */
+  .tag {
+    display: inline-block;
+    font-size: 8pt;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .tag-blue   { background: #e8f0fe; color: #174ea6; }
+  .tag-green  { background: #e6f4ea; color: #1e6e38; }
+  .tag-orange { background: #fef3cd; color: #7c4d00; }
+
+  /* ── SECTION SEPARATOR ── */
+  hr { border: none; border-top: 1px solid #dadce0; margin: 32px 0; }
+
+  /* ── STICKY MINI-NAV ── */
+  #mini-nav {
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.97);
+    border-bottom: 1px solid #dadce0;
+    padding: 8px 0;
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  #mini-nav a {
+    font-size: 8.5pt;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: #e8f0fe;
+    color: #174ea6 !important;
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  #mini-nav a:hover { background: #d2e3fc; }
+</style>
+</head>
+<body>
+
+<!-- ══ STICKY MINI-NAV ══ -->
+<div id="mini-nav">
+  <a href="#visual-map">🗺 Phase Map</a>
+  <a href="#section-1">1 · Mindset</a>
+  <a href="#section-2">2 · Questions</a>
+  <a href="#archetype-1">A1 · Telemetry</a>
+  <a href="#archetype-2">A2 · Windows</a>
+  <a href="#archetype-3">A3 · Rate Limiter</a>
+  <a href="#archetype-4">A4 · State Machine</a>
+  <a href="#section-4">4 · Bugs</a>
+  <a href="#section-5">5 · Scripts</a>
+  <a href="#section-6">6 · Q&amp;A</a>
+</div>
+
+<!-- ══ HEADER ══ -->
+<div class="doc-header">
+  <h1>🚀 Rocket Lab Technical Screen Reference</h1>
+  <p>
+    <strong>Candidate:</strong> Aidan McDowell &nbsp;|&nbsp;
+    <strong>Role:</strong> Ground Software Engineer II — Long Beach, CA &nbsp;|&nbsp;
+    <strong>Interviewer:</strong> Anh Thai (Ground Software Engineer) &nbsp;|&nbsp;
+    <strong>Format:</strong> 30 min · Microsoft Teams · ~20–25 min coding
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     VISUAL TRIGGER MAP
+══════════════════════════════════════════════════════════ -->
+<h2 id="visual-map">📍 CHRONOLOGICAL CALL NAVIGATION &amp; VISUAL TRIGGER MAP</h2>
+<p><em>Click any blue button to jump to that section. Every section has a <strong>[ ↩ Back ]</strong> button to return here.</em></p>
+
+<!-- PHASE 1 -->
+<div class="phase-box" id="phase-1">
+  <div class="phase-title">⏱ Phase 1 · Problem Reveal (Minutes 0–7)</div>
+  <div class="trigger">🎯 Trigger: Anh shares screen / pastes prompt and says "Take a look, let me know if you have questions."</div>
+  <p><strong>Step 1 — Identify the archetype in 5 seconds:</strong></p>
+  <ul>
+    <li>Mentions <em>voltages, temperatures, sensor packets, status, errors, averages</em> →
+      <a href="#archetype-1" class="nav-btn">A1 · Telemetry</a></li>
+    <li>Mentions <em>passes, schedules, contact windows, overlap, intervals</em> →
+      <a href="#archetype-2" class="nav-btn">A2 · Windows</a></li>
+    <li>Mentions <em>throttle, max commands, requests per second, sliding window</em> →
+      <a href="#archetype-3" class="nav-btn">A3 · Rate Limiter</a></li>
+    <li>Mentions <em>flight stages, transitions, state sequence, ABORT, illegal jump</em> →
+      <a href="#archetype-4" class="nav-btn">A4 · State Machine</a></li>
+  </ul>
+  <p><strong>Step 2 — Ask clarifying questions while reading:</strong>
+    <a href="#section-2" class="nav-btn">2 · Clarifying Questions</a>
+  </p>
+  <div class="quote-box">
+    "Before I start — can packets arrive as None or with missing keys? And can the input list be completely empty?"
+  </div>
+</div>
+
+<!-- PHASE 2 -->
+<div class="phase-box" id="phase-2">
+  <div class="phase-title">⌨️ Phase 2 · Active Coding (Minutes 8–20)</div>
+  <div class="trigger">🎯 Trigger: You start typing. Narrator mode ON.</div>
+  <a href="#section-3" class="nav-btn">3 · Code Skeletons</a>
+  <a href="#section-5" class="nav-btn">5 · Verbal Scripts</a>
+  <ul style="margin-top:10px;">
+    <li><strong>Line 1 of every function:</strong> <code>if not packets: return {}</code></li>
+    <li><strong>Every dict read:</strong> <code>.get("key")</code> — never <code>["key"]</code></li>
+    <li><strong>Before any division:</strong> guard with <code>if count &gt; 0:</code></li>
+    <li><strong>Narrate each guard:</strong> see <a href="#section-5" class="jump-link">Section 5 verbal scripts</a></li>
+  </ul>
+</div>
+
+<!-- PHASE 3 -->
+<div class="phase-box red" id="phase-3">
+  <div class="phase-title">🚨 Phase 3 · Red Error in Terminal</div>
+  <div class="trigger">🎯 Trigger: You hit Run Tests and see an error.</div>
+  <a href="#section-4" class="nav-btn">4 · Fatal Bugs Table</a>
+  <ul style="margin-top:10px;">
+    <li><strong>KeyError</strong> → swap <code>["key"]</code> for <code>.get("key")</code></li>
+    <li><strong>TypeError / &gt; not supported on None</strong> → add <code>if val is not None:</code></li>
+    <li><strong>ZeroDivisionError</strong> → wrap division in <code>if count &gt; 0:</code></li>
+    <li><strong>AttributeError</strong> → add <code>if not isinstance(packet, dict): continue</code></li>
+  </ul>
+</div>
+
+<!-- PHASE 4 -->
+<div class="phase-box warn" id="phase-4">
+  <div class="phase-title">📈 Phase 4 · Scale Curveball (Minutes 20–24)</div>
+  <div class="trigger">🎯 Trigger: Anh says — "That works. What happens at 100,000 packets per second over a 12-minute pass?"</div>
+  <a href="#section-1" class="nav-btn orange">1 · Batch vs Streaming</a>
+  <a href="#section-5-scale" class="nav-btn orange">5 · Scale Script</a>
+  <div class="quote-box">
+    "Right now this is O(N) memory — storing every packet bloats RAM. To run at constant O(1) memory, I'd maintain running state only: a running sum, packet count, and current max per subsystem — never buffering the raw list."
+  </div>
+</div>
+
+<!-- PHASE 5 -->
+<div class="phase-box green" id="phase-5">
+  <div class="phase-title">🙋 Phase 5 · Candidate Q&amp;A (Final 4 Minutes)</div>
+  <div class="trigger">🎯 Trigger: Anh says "We have a few minutes left — what questions do you have for me?"</div>
+  <a href="#section-6" class="nav-btn green">6 · Questions to Ask Anh</a>
+  <div class="quote-box green">
+    "How is the Ground Software team architecting the boundary between real-time binary ingestion from the ground stations and the WebSocket feeds pushing to mission control displays?"
+  </div>
+</div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 1 — MINDSET
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-1">1. The Ground Station Mindset: Plain-English Primer</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-4" class="back-btn">↩️ Back to Phase 4 (Scale)</a>
+
+<ul>
+  <li><strong>Conveyor Belt Analogy:</strong> Satellite passes transmit high-volume sensor packets over radio (downlink). Noise and packet drops happen constantly. Defensive code inspects every item, gently sifts out corrupted ones, and keeps the pipeline rolling.</li>
+  <li><strong><code>dict.get()</code> vs <code>dict[]</code>:</strong> <code>packet["voltage"]</code> crashes with <code>KeyError</code> if key is absent. <code>packet.get("voltage")</code> returns <code>None</code> safely.</li>
+  <li><strong>The <code>None</code> Math Trap:</strong> You cannot do <code>&gt;</code> or <code>+</code> on <code>None</code>. Always check <code>if val is not None:</code> before any math.</li>
+  <li><strong>The Empty Stream Trap:</strong> Dividing by a count of zero crashes. Always guard: <code>if count &gt; 0:</code>.</li>
+  <li><strong>Batch O(N) vs Streaming O(1):</strong> Storing 50M raw packets in a list exhausts RAM. Streaming means maintaining only a running sum + count + max — three variables per subsystem, forever.</li>
+</ul>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 2 — CLARIFYING QUESTIONS
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-2">2. The 3 Clarifying Questions to Ask Before Coding</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+
+<ol>
+  <li><em>"Can packets arrive as <code>None</code>, or with missing keys like subsystem or voltage?"</em></li>
+  <li><em>"Can timestamps arrive out of order, or can the input list be completely empty?"</em></li>
+  <li><em>"Is this a discrete in-memory batch, or should I structure it for an unbounded stream?"</em></li>
+</ol>
+<div class="quote-box">These buy you ~60 seconds while Anh answers — use that time to glance at the right archetype below.</div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 3 — 4 ARCHETYPES
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-3">3. The 4 Ground Software Code Archetypes</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 1
+───────────────────────────────────────────── -->
+<h3 id="archetype-1">
+  Archetype 1 · Telemetry Aggregation &amp; Anomaly Filter
+  <span class="tag tag-blue">Scenario 1</span>
+  <span class="tag tag-green">process_bus_telemetry</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: voltage, temperature, status, corrupt, missing, average, max, threshold, flag</em></p>
+
+<p><strong>The 5-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard empty input → return <code>{}</code></li>
+  <li>Loop with <code>.get()</code> on every key</li>
+  <li>Skip: <code>status != "OK"</code> or <code>voltage is None</code> or <code>not name</code></li>
+  <li>Accumulate: running <code>sum</code>, <code>count</code>, <code>max</code> per subsystem</li>
+  <li>Build output with <code>avg</code> and <code>flagged = avg &gt; 32.0</code></li>
+</ol>
+
+<pre><code><span class="kw">def</span> <span class="fn">process_bus_telemetry</span>(packets):
+    <span class="com"># Guard: empty input</span>
+    <span class="kw">if not</span> packets:
+        <span class="kw">return</span> {}
+
+    subsystems = {}
+
+    <span class="kw">for</span> packet <span class="kw">in</span> packets:
+        <span class="kw">if not</span> isinstance(packet, dict):    <span class="com"># skip corrupt non-dict</span>
+            <span class="kw">continue</span>
+
+        name    = packet.get(<span class="str">"subsystem"</span>)  <span class="com"># safe key read</span>
+        voltage = packet.get(<span class="str">"voltage"</span>)
+        status  = packet.get(<span class="str">"status"</span>)
+
+        <span class="com"># Filter: ERROR packets, None voltages, missing subsystem name</span>
+        <span class="kw">if</span> status != <span class="str">"OK"</span> <span class="kw">or</span> voltage <span class="kw">is None or not</span> name:
+            <span class="kw">continue</span>
+
+        <span class="kw">if</span> name <span class="kw">not in</span> subsystems:
+            subsystems[name] = {<span class="str">"sum"</span>: <span class="num">0</span>, <span class="str">"count"</span>: <span class="num">0</span>, <span class="str">"max"</span>: voltage}
+
+        subsystems[name][<span class="str">"sum"</span>]   += voltage
+        subsystems[name][<span class="str">"count"</span>] += <span class="num">1</span>
+        <span class="kw">if</span> voltage &gt; subsystems[name][<span class="str">"max"</span>]:
+            subsystems[name][<span class="str">"max"</span>] = voltage
+
+    result = {}
+    <span class="kw">for</span> name, data <span class="kw">in</span> subsystems.items():
+        avg = data[<span class="str">"sum"</span>] / data[<span class="str">"count"</span>]   <span class="com"># count &gt; 0 guaranteed above</span>
+        result[name] = {
+            <span class="str">"max"</span>    : data[<span class="str">"max"</span>],
+            <span class="str">"avg"</span>    : avg,
+            <span class="str">"count"</span>  : data[<span class="str">"count"</span>],
+            <span class="str">"flagged"</span>: avg &gt; <span class="num">32.0</span>
+        }
+    <span class="kw">return</span> result</code></pre>
+
+<table>
+  <tr><th>Edge Case</th><th>Guard Used</th></tr>
+  <tr><td>Empty list</td><td><code>if not packets: return {}</code></td></tr>
+  <tr><td>None voltage</td><td><code>voltage is None → continue</code></td></tr>
+  <tr><td>Missing key</td><td><code>packet.get("subsystem")</code></td></tr>
+  <tr><td>Corrupt non-dict</td><td><code>isinstance(packet, dict)</code></td></tr>
+  <tr><td>ZeroDivisionError</td><td>count guaranteed &gt; 0 since only valid packets enter accumulator</td></tr>
+</table>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 2
+───────────────────────────────────────────── -->
+<h3 id="archetype-2">
+  Archetype 2 · Ground Station Contact Window Merging
+  <span class="tag tag-blue">Scenario 2</span>
+  <span class="tag tag-green">merge_passes</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: passes, schedules, contact windows, overlap, intervals, merge, antenna, LOS</em></p>
+
+<p><strong>The 3-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard empty → return <code>[]</code></li>
+  <li>Sort by start time</li>
+  <li>Walk through: if <code>current_start &lt;= prev_end</code> → merge (extend end); else → append new block</li>
+</ol>
+
+<pre><code><span class="kw">def</span> <span class="fn">merge_passes</span>(intervals):
+    <span class="com"># Guard: empty input</span>
+    <span class="kw">if not</span> intervals:
+        <span class="kw">return</span> []
+
+    <span class="com"># Step 1: Sort chronologically by start time</span>
+    intervals.sort(key=<span class="kw">lambda</span> x: x[<span class="num">0</span>])
+
+    merged = [intervals[<span class="num">0</span>][:]  ]    <span class="com"># copy of first window</span>
+
+    <span class="kw">for</span> start, end <span class="kw">in</span> intervals[<span class="num">1</span>:]:
+        prev_start, prev_end = merged[-<span class="num">1</span>]
+
+        <span class="kw">if</span> start &lt;= prev_end:          <span class="com"># overlapping — extend</span>
+            merged[-<span class="num">1</span>][<span class="num">1</span>] = max(prev_end, end)
+        <span class="kw">else</span>:                           <span class="com"># gap — new block</span>
+            merged.append([start, end])
+
+    <span class="kw">return</span> merged</code></pre>
+
+<table>
+  <tr><th>Input</th><th>Output</th></tr>
+  <tr><td><code>[[10,14],[12,18],[20,25]]</code></td><td><code>[[10,18],[20,25]]</code></td></tr>
+  <tr><td><code>[]</code></td><td><code>[]</code></td></tr>
+  <tr><td><code>[[1,5],[6,10]]</code></td><td><code>[[1,5],[6,10]]</code> — not overlapping</td></tr>
+  <tr><td><code>[[20,25],[1,3],[2,7],[15,22]]</code> (unsorted)</td><td><code>[[1,7],[15,25]]</code></td></tr>
+</table>
+
+<p><strong>Key insight:</strong> Adjacent intervals like <code>[1,5]</code> and <code>[6,10]</code> are <em>not</em> overlapping — overlap requires <code>start &lt;= prev_end</code> (strictly less than or equal).</p>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 3
+───────────────────────────────────────────── -->
+<h3 id="archetype-3">
+  Archetype 3 · Uplink Command Rate Limiter (Sliding Window)
+  <span class="tag tag-blue">Scenario 3</span>
+  <span class="tag tag-green">CommandLimiter</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: throttle, max commands, rate limit, sliding window, transceiver, uplink</em></p>
+
+<p><strong>The 3-Step Mental Model:</strong></p>
+<ol>
+  <li><code>__init__</code>: store <code>max_cmds</code>, <code>window_sec</code>, and a <code>deque</code> of timestamps</li>
+  <li><code>allow_command(t)</code>: purge timestamps older than <code>t - window_sec</code></li>
+  <li>If <code>len(deque) &lt; max_cmds</code>: append <code>t</code> → return <code>True</code>. Else <code>False</code>.</li>
+</ol>
+
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">class</span> <span class="cls">CommandLimiter</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, max_cmds: int, window_sec: int):
+        self.max_cmds   = max_cmds
+        self.window_sec = window_sec
+        self.timestamps = deque()          <span class="com"># O(1) popleft</span>
+
+    <span class="kw">def</span> <span class="fn">allow_command</span>(self, timestamp: float) -&gt; bool:
+        cutoff = timestamp - self.window_sec
+
+        <span class="com"># Step 1: Purge expired timestamps from the front</span>
+        <span class="kw">while</span> self.timestamps <span class="kw">and</span> self.timestamps[<span class="num">0</span>] &lt;= cutoff:
+            self.timestamps.popleft()
+
+        <span class="com"># Step 2: Check capacity</span>
+        <span class="kw">if</span> len(self.timestamps) &lt; self.max_cmds:
+            self.timestamps.append(timestamp)
+            <span class="kw">return True</span>
+
+        <span class="kw">return False</span></code></pre>
+
+<table>
+  <tr><th>Call</th><th>Result</th><th>Why</th></tr>
+  <tr><td><code>allow(1.0)</code></td><td>✅ True</td><td>1st of 2 allowed</td></tr>
+  <tr><td><code>allow(2.0)</code></td><td>✅ True</td><td>2nd of 2 allowed</td></tr>
+  <tr><td><code>allow(3.0)</code></td><td>❌ False</td><td>2 commands in [1.0–6.0]</td></tr>
+  <tr><td><code>allow(6.5)</code></td><td>✅ True</td><td>1.0 expired (6.5–5=1.5)</td></tr>
+</table>
+
+<p><strong>Why <code>deque</code>?</strong> <code>popleft()</code> is O(1). A list's <code>pop(0)</code> is O(N). At 100k commands/sec that matters.</p>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 4
+───────────────────────────────────────────── -->
+<h3 id="archetype-4">
+  Archetype 4 · Flight State Machine Sequence Validator
+  <span class="tag tag-blue">Scenario 4</span>
+  <span class="tag tag-green">validate_sequence</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: flight modes, stage separation, transitions, ABORT, illegal jump, state, sequence</em></p>
+
+<p><strong>The 4-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard: empty list → <code>{"valid": False, "error": "No events"}</code></li>
+  <li>Guard: first event must be <code>"PRE_LAUNCH"</code></li>
+  <li>Dict maps each state to allowed next states</li>
+  <li>Walk pairs: if next not in allowed → return error with index</li>
+</ol>
+
+<pre><code>VALID_TRANSITIONS = {
+    <span class="str">"PRE_LAUNCH"</span>      : [<span class="str">"BOOST"</span>],
+    <span class="str">"BOOST"</span>           : [<span class="str">"STAGE_SEP"</span>],
+    <span class="str">"STAGE_SEP"</span>       : [<span class="str">"COAST"</span>],
+    <span class="str">"COAST"</span>           : [<span class="str">"PAYLOAD_DEPLOY"</span>],
+    <span class="str">"PAYLOAD_DEPLOY"</span>  : [<span class="str">"MISSION_COMPLETE"</span>],
+    <span class="str">"MISSION_COMPLETE"</span>: []
+}
+
+<span class="kw">def</span> <span class="fn">validate_sequence</span>(events):
+    <span class="kw">if not</span> events:
+        <span class="kw">return</span> {<span class="str">"valid"</span>: <span class="kw">False</span>, <span class="str">"error"</span>: <span class="str">"No events provided"</span>}
+
+    <span class="kw">if</span> events[<span class="num">0</span>] != <span class="str">"PRE_LAUNCH"</span>:
+        <span class="kw">return</span> {<span class="str">"valid"</span>: <span class="kw">False</span>,
+                <span class="str">"error"</span>: f<span class="str">"Must start with PRE_LAUNCH, got {events[0]}"</span>}
+
+    <span class="kw">for</span> i <span class="kw">in</span> range(<span class="num">1</span>, len(events)):
+        current = events[i - <span class="num">1</span>]
+        nxt     = events[i]
+        allowed = VALID_TRANSITIONS.get(current, [])  <span class="com"># safe: unknown state → []</span>
+
+        <span class="kw">if</span> nxt <span class="kw">not in</span> allowed:
+            <span class="kw">return</span> {<span class="str">"valid"</span>: <span class="kw">False</span>,
+                    <span class="str">"error"</span>: f<span class="str">"Invalid transition from {current} to {nxt} at index {i}"</span>}
+
+    <span class="kw">return</span> {<span class="str">"valid"</span>: <span class="kw">True</span>, <span class="str">"final_state"</span>: events[-<span class="num">1</span>]}</code></pre>
+
+<table>
+  <tr><th>Input</th><th>Output</th></tr>
+  <tr><td><code>["PRE_LAUNCH","BOOST","STAGE_SEP"]</code></td><td>✅ valid, final_state STAGE_SEP</td></tr>
+  <tr><td><code>["PRE_LAUNCH","PAYLOAD_DEPLOY"]</code></td><td>❌ Invalid at index 1</td></tr>
+  <tr><td><code>["BOOST","STAGE_SEP"]</code></td><td>❌ Must start with PRE_LAUNCH</td></tr>
+  <tr><td><code>[]</code></td><td>❌ No events provided</td></tr>
+  <tr><td><code>["PRE_LAUNCH","BOOST","WARP_DRIVE"]</code></td><td>❌ WARP_DRIVE not in allowed</td></tr>
+</table>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 4 — FATAL BUGS
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-4">4. The 4 Fatal Bugs &amp; Exact Fixes</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-3" class="back-btn">↩️ Back to Phase 3 (Error Screen)</a>
+
+<table>
+  <thead>
+    <tr><th>Error</th><th>Cause</th><th>Fix</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>KeyError</code></td>
+      <td>Using <code>packet["key"]</code> when key is absent</td>
+      <td><code>packet.get("key")</code></td>
+    </tr>
+    <tr>
+      <td><code>TypeError: '&gt;' not supported on None</code></td>
+      <td>Comparing or adding <code>None</code></td>
+      <td><code>if val is not None:</code> before math</td>
+    </tr>
+    <tr>
+      <td><code>ZeroDivisionError</code></td>
+      <td>Dividing by count when no valid packets</td>
+      <td><code>if count &gt; 0: avg = total / count</code></td>
+    </tr>
+    <tr>
+      <td><code>AttributeError</code></td>
+      <td>Packet is a string or <code>None</code>, not a dict</td>
+      <td><code>if not isinstance(packet, dict): continue</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 5 — VERBAL SCRIPTS
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-5">5. Verbal Scripts — What to Say Out Loud While Coding</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<ul>
+  <li><strong>Opening:</strong> <em>"Before I type anything, let me trace the expected input shape and confirm how we handle corrupt or missing fields."</em></li>
+  <li><strong>Typing <code>.get()</code>:</strong> <em>"Using .get() so missing telemetry keys don't throw an unhandled KeyError."</em></li>
+  <li><strong>Adding None guard:</strong> <em>"Explicit None check here — missing sensor readings shouldn't break our numerical calculations."</em></li>
+  <li><strong>Before division:</strong> <em>"Checking count is greater than zero before dividing to prevent a ZeroDivisionError on an empty pass."</em></li>
+  <li><strong>After passing tests:</strong> <em>"All tests green. The main thing I'd add next is a staleness flag for sensors that go silent mid-pass."</em></li>
+</ul>
+
+<h3 id="section-5-scale">Scale / O(1) Memory Script</h3>
+<a href="#phase-4" class="back-btn">↩️ Back to Phase 4 (Scale Curveball)</a>
+<div class="quote-box">
+  "Right now this is O(N) memory — storing every packet in a list means RAM scales with pass duration. To handle 100,000 packets per second at O(1) memory, I'd keep only running state per subsystem: a running sum, a count, and a current max. Three variables total, updated in-place on every packet. Memory stays flat regardless of pass length."
+</div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 6 — QUESTIONS FOR ANH
+══════════════════════════════════════════════════════════ -->
+<h2 id="section-6">6. High-Impact Questions to Ask Anh (Pick 2)</h2>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-5" class="back-btn">↩️ Back to Phase 5 (Q&amp;A)</a>
+
+<ol>
+  <li><em>"How is the Ground Software team currently architecting the boundary between real-time binary ingestion from the ground stations and the WebSocket feeds pushing to mission control displays?"</em></li>
+  <li><em>"What does the handoff and telemetry schema synchronization look like between the Flight Software team on the vehicle and your Ground Software team?"</em></li>
+  <li><em>"How does the team handle packet ordering and replay when the ground station loses contact mid-pass and then reconnects?"</em></li>
+</ol>
+
+<div class="quote-box green">
+  Close with: <em>"That makes a lot of sense, especially with pass durations being so tight. Thanks for walking through the problem with me, Anh!"</em>
+</div>
+
+</body>
+</html>
