@@ -695,6 +695,11 @@ html, body {
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  /* Kill ALL font ligatures — prevents <= from rendering as ≤ etc */
+  font-variant-ligatures: none;
+  -webkit-font-feature-settings: "liga" 0, "calt" 0, "clig" 0, "dlig" 0;
+  font-feature-settings: "liga" 0, "calt" 0, "clig" 0, "dlig" 0;
+  text-rendering: optimizeSpeed;
 }
 
 .editor-controls { display: flex; gap: 8px; }

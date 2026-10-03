@@ -505,45 +505,78 @@ function togglePrompt() {
 }
 
 /* ========== UNICODE SANITIZER ========== */
-// Three-layer defense against OS/IME smart-punctuation that converts <= to ≤ etc.
-var UNICODE_MAP = [
-  ['\u2264','<='], ['\u2265','>='], ['\u2260','!='],
-  ['\u2192','->'], ['\u2190','<-'], ['\u2026','...'],
-  ['\u00D7','*'],  ['\u00F7','/'],  ['\u2212','-'],
-  ['\u201C','"'],  ['\u201D','"'],
-  ['\u2018',"'"],  ['\u2019',"'"],
-  ['\u2039','<'],  ['\u203A','>'],
-];
+// Nuclear approach: instead of whitelisting specific Unicode chars, we catch ALL non-ASCII
+// and replace known operator substitutions, then strip anything else that doesn't belong.
+// This covers every possible IME/OS substitution at once.
+var UNICODE_TO_ASCII = {};
+// Operators
+UNICODE_TO_ASCII['\u2264'] = '<=';   // ≤
+UNICODE_TO_ASCII['\u2265'] = '>=';   // ≥
+UNICODE_TO_ASCII['\u2260'] = '!=';   // ≠
+UNICODE_TO_ASCII['\u2192'] = '->';   // →
+UNICODE_TO_ASCII['\u2190'] = '<-';   // ←
+UNICODE_TO_ASCII['\u21D0'] = '<=';   // ⇐
+UNICODE_TO_ASCII['\u21D2'] = '=>';   // ⇒
+UNICODE_TO_ASCII['\u27F8'] = '<=';   // ⟸
+UNICODE_TO_ASCII['\u27F9'] = '=>';   // ⟹
+UNICODE_TO_ASCII['\u2A7D'] = '<=';   // ⩽
+UNICODE_TO_ASCII['\u2A7E'] = '>=';   // ⩾
+UNICODE_TO_ASCII['\u2266'] = '<=';   // ≦
+UNICODE_TO_ASCII['\u2267'] = '>=';   // ≧
+// Math
+UNICODE_TO_ASCII['\u00D7'] = '*';    // ×
+UNICODE_TO_ASCII['\u00F7'] = '/';    // ÷
+UNICODE_TO_ASCII['\u2212'] = '-';    // − (minus sign)
+UNICODE_TO_ASCII['\u2026'] = '...';  // …
+// Quotes
+UNICODE_TO_ASCII['\u201C'] = '"';    // "
+UNICODE_TO_ASCII['\u201D'] = '"';    // "
+UNICODE_TO_ASCII['\u2018'] = "'";    // '
+UNICODE_TO_ASCII['\u2019'] = "'";    // '
+// Angle brackets
+UNICODE_TO_ASCII['\u2039'] = '<';    // ‹
+UNICODE_TO_ASCII['\u203A'] = '>';    // ›
+UNICODE_TO_ASCII['\u00AB'] = '<<';   // «
+UNICODE_TO_ASCII['\u00BB'] = '>>';   // »
 
-// Layer 2 (fallback): fix AFTER the input event, with correct cursor-position tracking.
-// When a 1-char Unicode is replaced with a 2-char ASCII sequence, every occurrence
-// that falls before the cursor shifts the cursor right by 1 — we track that explicitly.
 function sanitizeUnicode(ta) {
   var val = ta.value;
   var sCursor = ta.selectionStart;
   var eCursor = ta.selectionEnd;
+  var out = '';
   var changed = false;
 
-  for (var i = 0; i < UNICODE_MAP.length; i++) {
-    var uni = UNICODE_MAP[i][0], asc = UNICODE_MAP[i][1];
-    var idx = val.indexOf(uni);
-    if (idx === -1) continue;
-    changed = true;
-    var diff = asc.length - uni.length;  // positive when ASCII is longer
-    while (idx !== -1) {
-      val = val.substring(0, idx) + asc + val.substring(idx + uni.length);
-      if (diff !== 0) {
-        if (idx < sCursor) sCursor += diff;
-        if (idx < eCursor) eCursor += diff;
-      }
-      idx = val.indexOf(uni, idx + asc.length);
+  for (var i = 0; i < val.length; i++) {
+    var ch = val[i];
+    var code = ch.charCodeAt(0);
+
+    // Allow printable ASCII (space through ~), tab, newline, carriage return
+    if ((code >= 0x20 && code <= 0x7E) || code === 0x09 || code === 0x0A || code === 0x0D) {
+      out += ch;
+      continue;
     }
+
+    // Known substitution — replace with ASCII equivalent
+    if (UNICODE_TO_ASCII[ch]) {
+      var replacement = UNICODE_TO_ASCII[ch];
+      out += replacement;
+      var diff = replacement.length - 1; // how many extra chars we added
+      if (i < sCursor) sCursor += diff;
+      if (i < eCursor) eCursor += diff;
+      changed = true;
+      continue;
+    }
+
+    // Unknown non-ASCII — strip it entirely
+    if (i < sCursor) sCursor -= 1;
+    if (i < eCursor) eCursor -= 1;
+    changed = true;
   }
 
   if (changed) {
-    ta.value = val;
-    ta.selectionStart = sCursor;
-    ta.selectionEnd = eCursor;
+    ta.value = out;
+    ta.selectionStart = Math.max(0, sCursor);
+    ta.selectionEnd = Math.max(0, eCursor);
   }
   return changed;
 }
@@ -681,20 +714,22 @@ document.addEventListener('DOMContentLoaded', function() {
   initAC();
   var editor = document.getElementById('codeEditor');
   if (editor) {
-    // LAYER 1: beforeinput — fires before the DOM is changed.
-    // We cancel substitution events and re-insert the correct ASCII ourselves.
+    // LAYER 1: beforeinput — cancel Unicode substitutions before they hit the DOM
     editor.addEventListener('beforeinput', function(e) {
-      var data = e.data || '';
+      var data = e.data;
       if (!data || !e.cancelable) return;
-      var hasUnicode = false;
-      for (var i = 0; i < UNICODE_MAP.length; i++) {
-        if (data.indexOf(UNICODE_MAP[i][0]) !== -1) { hasUnicode = true; break; }
+      var hasNonAscii = false;
+      for (var i = 0; i < data.length; i++) {
+        if (data.charCodeAt(i) > 0x7E) { hasNonAscii = true; break; }
       }
-      if (!hasUnicode) return;
+      if (!hasNonAscii) return;
       e.preventDefault();
-      var fixed = data;
-      for (var j = 0; j < UNICODE_MAP.length; j++) {
-        fixed = fixed.split(UNICODE_MAP[j][0]).join(UNICODE_MAP[j][1]);
+      var fixed = '';
+      for (var j = 0; j < data.length; j++) {
+        var ch = data[j];
+        if (UNICODE_TO_ASCII[ch]) fixed += UNICODE_TO_ASCII[ch];
+        else if (ch.charCodeAt(0) <= 0x7E) fixed += ch;
+        // else: strip unknown non-ASCII
       }
       var s = editor.selectionStart, en = editor.selectionEnd;
       editor.value = editor.value.substring(0, s) + fixed + editor.value.substring(en);
