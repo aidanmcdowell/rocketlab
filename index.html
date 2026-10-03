@@ -107,7 +107,8 @@
       </div>
 
       <div class="chat-input-area">
-        <textarea id="chatInput" placeholder="Type your response or question..." rows="3"></textarea>
+        <textarea id="chatInput" placeholder="Type your response or question..." rows="3"
+          autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
         <div class="chat-controls">
           <button class="btn-hint" id="btnHint" onclick="requestHint()">💡 Hint</button>
           <button class="btn-send" id="btnSend" onclick="sendMessage()">Send →</button>
@@ -144,7 +145,14 @@
         </div>
         <div class="editor-wrapper">
           <div class="line-numbers" id="lineNumbers">1</div>
-          <textarea class="code-editor" id="codeEditor" spellcheck="false"></textarea>
+          <textarea class="code-editor" id="codeEditor"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            autocomplete="off"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"></textarea>
         </div>
       </div>
 
