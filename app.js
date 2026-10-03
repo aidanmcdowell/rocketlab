@@ -550,7 +550,7 @@ var PY_KW = [
   'allow_command','VALID_TRANSITIONS','timestamps','window_sec','max_cmds',
 ];
 
-var AC = { visible: false, items: [], sel: 0, token: '', tokenStart: 0 };
+var AC = { visible: false, items: [], sel: 0, token: '', tokenStart: 0, justAccepted: false };
 var acEl = null;
 
 function initAC() {
@@ -569,7 +569,13 @@ function acCandidates(token) {
   var editor = document.getElementById('codeEditor');
   var extra = editor ? (editor.value.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || []) : [];
   var all = PY_KW.slice();
-  extra.forEach(function(w) { if (all.indexOf(w) === -1) all.push(w); });
+  extra.forEach(function(w) {
+    // Skip Title-Case words from docstrings (e.g. Returns, Args, List, Dict)
+    // unless they're already in the keyword list
+    if (PY_KW.indexOf(w) !== -1) return; // already in list
+    if (/^[A-Z]/.test(w)) return;        // skip Title-Case
+    if (all.indexOf(w) === -1) all.push(w);
+  });
   var lo = token.toLowerCase();
   return all
     .filter(function(w) { return w.toLowerCase().indexOf(lo) === 0 && w !== token; })
@@ -581,15 +587,27 @@ function acCandidates(token) {
 }
 
 function showAC(editor) {
+  // Suppress the re-trigger that fires immediately after accepting a completion
+  if (AC.justAccepted) { AC.justAccepted = false; hideAC(); return; }
+
   var pos = editor.selectionStart;
   var before = editor.value.substring(0, pos);
   var m = before.match(/[a-zA-Z_][a-zA-Z0-9_]*$/);
   if (!m) { hideAC(); return; }
+
   var token = m[0];
+  var tokenStart = pos - token.length;
+
+  // Don't trigger after a dot — that's a method call, not a name lookup
+  if (tokenStart > 0 && editor.value[tokenStart - 1] === '.') { hideAC(); return; }
+
+  // Need at least 2 chars and token must not already be an exact keyword
+  if (token.length < 2) { hideAC(); return; }
+
   var items = acCandidates(token);
   if (!items.length) { hideAC(); return; }
   AC.visible = true; AC.items = items; AC.sel = 0;
-  AC.token = token; AC.tokenStart = pos - token.length;
+  AC.token = token; AC.tokenStart = tokenStart;
   renderAC(editor);
 }
 
@@ -632,6 +650,7 @@ function acceptAC(editor) {
   var word = AC.items[AC.sel];
   var before = editor.value.substring(0, AC.tokenStart);
   var after  = editor.value.substring(editor.selectionStart);
+  AC.justAccepted = true;  // suppress the input event re-trigger
   editor.value = before + word + after;
   editor.selectionStart = editor.selectionEnd = AC.tokenStart + word.length;
   updateLineNumbers();
