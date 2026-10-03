@@ -505,8 +505,7 @@ function togglePrompt() {
 }
 
 /* ========== UNICODE SANITIZER ========== */
-// OS-level IME and browser smart punctuation convert operators before JS can intercept via HTML attrs.
-// We catch the substituted character on every `input` and `compositionend` event and swap it back.
+// Three-layer defense against OS/IME smart-punctuation that converts <= to ≤ etc.
 var UNICODE_MAP = [
   ['\u2264','<='], ['\u2265','>='], ['\u2260','!='],
   ['\u2192','->'], ['\u2190','<-'], ['\u2026','...'],
@@ -516,22 +515,37 @@ var UNICODE_MAP = [
   ['\u2039','<'],  ['\u203A','>'],
 ];
 
+// Layer 2 (fallback): fix AFTER the input event, with correct cursor-position tracking.
+// When a 1-char Unicode is replaced with a 2-char ASCII sequence, every occurrence
+// that falls before the cursor shifts the cursor right by 1 — we track that explicitly.
 function sanitizeUnicode(ta) {
   var val = ta.value;
+  var sCursor = ta.selectionStart;
+  var eCursor = ta.selectionEnd;
   var changed = false;
+
   for (var i = 0; i < UNICODE_MAP.length; i++) {
     var uni = UNICODE_MAP[i][0], asc = UNICODE_MAP[i][1];
-    if (val.indexOf(uni) !== -1) {
-      val = val.split(uni).join(asc);
-      changed = true;
+    var idx = val.indexOf(uni);
+    if (idx === -1) continue;
+    changed = true;
+    var diff = asc.length - uni.length;  // positive when ASCII is longer
+    while (idx !== -1) {
+      val = val.substring(0, idx) + asc + val.substring(idx + uni.length);
+      if (diff !== 0) {
+        if (idx < sCursor) sCursor += diff;
+        if (idx < eCursor) eCursor += diff;
+      }
+      idx = val.indexOf(uni, idx + asc.length);
     }
   }
+
   if (changed) {
-    var s = ta.selectionStart, e = ta.selectionEnd;
     ta.value = val;
-    ta.selectionStart = s;
-    ta.selectionEnd = e;
+    ta.selectionStart = sCursor;
+    ta.selectionEnd = eCursor;
   }
+  return changed;
 }
 
 /* ========== AUTOCOMPLETE ========== */
@@ -667,16 +681,48 @@ document.addEventListener('DOMContentLoaded', function() {
   initAC();
   var editor = document.getElementById('codeEditor');
   if (editor) {
+    // LAYER 1: beforeinput — fires before the DOM is changed.
+    // We cancel substitution events and re-insert the correct ASCII ourselves.
+    editor.addEventListener('beforeinput', function(e) {
+      var data = e.data || '';
+      if (!data || !e.cancelable) return;
+      var hasUnicode = false;
+      for (var i = 0; i < UNICODE_MAP.length; i++) {
+        if (data.indexOf(UNICODE_MAP[i][0]) !== -1) { hasUnicode = true; break; }
+      }
+      if (!hasUnicode) return;
+      e.preventDefault();
+      var fixed = data;
+      for (var j = 0; j < UNICODE_MAP.length; j++) {
+        fixed = fixed.split(UNICODE_MAP[j][0]).join(UNICODE_MAP[j][1]);
+      }
+      var s = editor.selectionStart, en = editor.selectionEnd;
+      editor.value = editor.value.substring(0, s) + fixed + editor.value.substring(en);
+      editor.selectionStart = editor.selectionEnd = s + fixed.length;
+      updateLineNumbers();
+    });
+
+    // LAYER 2: input event — sanitize after the fact (catches IME that bypasses beforeinput)
     editor.addEventListener('input', function() {
-      sanitizeUnicode(editor);  // must run before line count so cursor pos is correct
+      sanitizeUnicode(editor);
       updateLineNumbers();
       if (!State.firstCodeEditTime && State.startTime) State.firstCodeEditTime = Date.now();
       showAC(editor);
     });
+
+    // LAYER 2b: compositionend — fires after IME commits a character
     editor.addEventListener('compositionend', function() {
       sanitizeUnicode(editor);
       updateLineNumbers();
     });
+
+    // LAYER 3: periodic sweep — nuclear fallback for anything that slips past both events
+    setInterval(function() {
+      if (document.activeElement === editor) {
+        if (sanitizeUnicode(editor)) updateLineNumbers();
+      }
+    }, 300);
+
     editor.addEventListener('keydown', function(e) {
       if (e.key === 'Tab') {
         e.preventDefault();
