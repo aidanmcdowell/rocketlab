@@ -364,40 +364,44 @@
 </ol>
 
 <pre><code><span class="kw">def</span> <span class="fn">process_bus_telemetry</span>(packets):
-    <span class="com"># Guard: empty input</span>
+    <span class="com"># SAY: "First thing — guard the empty case up front"</span>
     <span class="kw">if not</span> packets:
         <span class="kw">return</span> {}
 
-    subsystems = {}
+    subsystems = {}  <span class="com"># SAY: "Dict to accumulate per-subsystem running stats"</span>
 
     <span class="kw">for</span> packet <span class="kw">in</span> packets:
-        <span class="kw">if not</span> isinstance(packet, dict):    <span class="com"># skip corrupt non-dict</span>
+        <span class="kw">if not</span> isinstance(packet, dict):    <span class="com"># SAY: "Skip corrupt non-dict entries from the downlink"</span>
             <span class="kw">continue</span>
 
-        name    = packet.get(<span class="str">"subsystem"</span>)  <span class="com"># safe key read</span>
+        <span class="com"># SAY: "Using .get() — never bracket access on untrusted data"</span>
+        name    = packet.get(<span class="str">"subsystem"</span>)
         voltage = packet.get(<span class="str">"voltage"</span>)
         status  = packet.get(<span class="str">"status"</span>)
 
-        <span class="com"># Filter: ERROR packets, None voltages, missing subsystem name</span>
+        <span class="com"># SAY: "Triple filter — skip ERROR status, None voltages, missing names"</span>
         <span class="kw">if</span> status != <span class="str">"OK"</span> <span class="kw">or</span> voltage <span class="kw">is None or not</span> name:
             <span class="kw">continue</span>
 
+        <span class="com"># SAY: "Initialize new subsystem with first voltage as seed max"</span>
         <span class="kw">if</span> name <span class="kw">not in</span> subsystems:
             subsystems[name] = {<span class="str">"sum"</span>: <span class="num">0</span>, <span class="str">"count"</span>: <span class="num">0</span>, <span class="str">"max"</span>: voltage}
 
+        <span class="com"># SAY: "Running accumulation — O(1) per packet"</span>
         subsystems[name][<span class="str">"sum"</span>]   += voltage
         subsystems[name][<span class="str">"count"</span>] += <span class="num">1</span>
         <span class="kw">if</span> voltage &gt; subsystems[name][<span class="str">"max"</span>]:
             subsystems[name][<span class="str">"max"</span>] = voltage
 
+    <span class="com"># SAY: "Build output dict — count > 0 is guaranteed since we only stored valid packets"</span>
     result = {}
     <span class="kw">for</span> name, data <span class="kw">in</span> subsystems.items():
-        avg = data[<span class="str">"sum"</span>] / data[<span class="str">"count"</span>]   <span class="com"># count &gt; 0 guaranteed above</span>
+        avg = data[<span class="str">"sum"</span>] / data[<span class="str">"count"</span>]
         result[name] = {
             <span class="str">"max"</span>    : data[<span class="str">"max"</span>],
             <span class="str">"avg"</span>    : avg,
             <span class="str">"count"</span>  : data[<span class="str">"count"</span>],
-            <span class="str">"flagged"</span>: avg &gt; <span class="num">32.0</span>
+            <span class="str">"flagged"</span>: avg &gt; <span class="num">32.0</span>  <span class="com"># SAY: "Flag subsystems above 32V threshold"</span>
         }
     <span class="kw">return</span> result</code></pre>
 

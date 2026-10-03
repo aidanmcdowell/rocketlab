@@ -230,17 +230,31 @@ function tickTimer() {
   const progressPct = (elapsed / State.totalSeconds) * 100;
   document.getElementById("phaseBar").style.width = Math.min(progressPct,100) + "%";
 
+  // Phases are now checkpoint-driven (see checkPhaseCheckpoints), not time-driven
   const elapsedMin = elapsed / 60;
-  let newPhase = 0;
-  for (let i = PHASES.length - 1; i >= 0; i--) {
-    if (elapsedMin >= PHASES[i].startMin) { newPhase = i; break; }
-  }
-  if (newPhase !== State.phase) transitionPhase(newPhase);
 
   // Check for timed interruptions
   checkInterruptions(elapsedMin);
 
   if (remaining === 0) { clearInterval(State.timerInterval); endInterview(); }
+}
+
+/* ========== CHECKPOINT-DRIVEN PHASES ========== */
+// Phase 0: Interview starts (auto)
+// Phase 1: User begins editing code (first keystroke in editor)
+// Phase 2: User sends a chat message OR writes 3+ new lines
+// Phase 3: User clicks Run Tests
+// Phase 4: All tests pass
+function checkPhaseCheckpoint(trigger) {
+  if (State.phase === 0 && (trigger === 'edit' || trigger === 'chat')) {
+    transitionPhase(1);
+  } else if (State.phase === 1 && (trigger === 'chat' || trigger === 'substantial-edit')) {
+    transitionPhase(2);
+  } else if (State.phase === 2 && trigger === 'run-tests') {
+    transitionPhase(3);
+  } else if (State.phase === 3 && trigger === 'all-passed') {
+    transitionPhase(4);
+  }
 }
 
 /* ========== TIMED INTERRUPTIONS ========== */
@@ -397,8 +411,9 @@ function sendMessage() {
   if (!State.firstChatTime) {
     State.firstChatTime = Date.now();
     const elapsedSec = (State.firstChatTime - State.startTime) / 1000;
-    if (elapsedSec <= 180) State.planningQuestionsAsked = true; // Spoke within first 3 minutes
+    if (elapsedSec <= 180) State.planningQuestionsAsked = true;
   }
+  checkPhaseCheckpoint('chat');
 
   appendMessage("candidate", text);
   State.candidateMessages.push(text);
@@ -740,7 +755,15 @@ document.addEventListener('DOMContentLoaded', function() {
     editor.addEventListener('input', function() {
       sanitizeUnicode(editor);
       updateLineNumbers();
-      if (!State.firstCodeEditTime && State.startTime) State.firstCodeEditTime = Date.now();
+      if (!State.firstCodeEditTime && State.startTime) {
+        State.firstCodeEditTime = Date.now();
+        checkPhaseCheckpoint('edit');
+      }
+      // Check if user has written 3+ lines beyond starter code
+      var sc = SCENARIOS[State.selectedScenario];
+      if (sc && editor.value.split('\n').length > sc.starterCode.split('\n').length + 3) {
+        checkPhaseCheckpoint('substantial-edit');
+      }
       showAC(editor);
     });
 
@@ -758,7 +781,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300);
 
     editor.addEventListener('keydown', function(e) {
-      if (e.key === 'Tab') {
+      // Tab: accept autocomplete OR insert 4 spaces
+      if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault();
         if (AC.visible && AC.items.length) { acceptAC(editor); }
         else {
@@ -767,6 +791,55 @@ document.addEventListener('DOMContentLoaded', function() {
           editor.selectionStart = editor.selectionEnd = s + 4;
           updateLineNumbers();
         }
+        return;
+      }
+      // Shift+Tab: remove 4 spaces (back-tab)
+      if (e.key === 'Tab' && e.shiftKey) {
+        e.preventDefault();
+        var s = editor.selectionStart;
+        var before = editor.value.substring(0, s);
+        var lineStart = before.lastIndexOf('\n') + 1;
+        var linePrefix = editor.value.substring(lineStart, s);
+        var spacesToRemove = 0;
+        for (var si = 0; si < 4 && si < linePrefix.length; si++) {
+          if (linePrefix[si] === ' ') spacesToRemove++;
+          else break;
+        }
+        if (spacesToRemove > 0) {
+          editor.value = editor.value.substring(0, lineStart) + editor.value.substring(lineStart + spacesToRemove);
+          editor.selectionStart = editor.selectionEnd = s - spacesToRemove;
+          updateLineNumbers();
+        }
+        return;
+      }
+      // Backspace: if previous 4 chars are all spaces, delete all 4 (back-tab on backspace)
+      if (e.key === 'Backspace') {
+        var s = editor.selectionStart;
+        if (s >= 4 && editor.selectionStart === editor.selectionEnd) {
+          var prev4 = editor.value.substring(s - 4, s);
+          if (prev4 === '    ') {
+            e.preventDefault();
+            editor.value = editor.value.substring(0, s - 4) + editor.value.substring(s);
+            editor.selectionStart = editor.selectionEnd = s - 4;
+            updateLineNumbers();
+            return;
+          }
+        }
+      }
+      // Enter: auto-indent (match current line indent, +4 after colon)
+      if (e.key === 'Enter' && !AC.visible) {
+        e.preventDefault();
+        var s = editor.selectionStart;
+        var before = editor.value.substring(0, s);
+        var lineStart = before.lastIndexOf('\n') + 1;
+        var currentLine = before.substring(lineStart);
+        var indent = currentLine.match(/^(\s*)/)[1];  // current line's leading whitespace
+        var trimmed = currentLine.trimEnd();
+        // Extra indent after lines ending with : (def, if, for, while, else, elif, with, try, except, class)
+        if (trimmed.endsWith(':')) indent += '    ';
+        editor.value = before + '\n' + indent + editor.value.substring(s);
+        editor.selectionStart = editor.selectionEnd = s + 1 + indent.length;
+        updateLineNumbers();
         return;
       }
       if (AC.visible) {
@@ -824,7 +897,7 @@ function clearTerminal() {
 
 /* ========== TEST EXECUTION ========== */
 async function runTests() {
-  // No phase gate — always allow running tests
+  checkPhaseCheckpoint('run-tests');
   const code = document.getElementById("codeEditor").value.trim();
   State.codeRunCount++;
   const terminal = document.getElementById("terminalOutput");
@@ -874,6 +947,7 @@ async function runTests() {
       State.allTestsPassed = result.message.includes("ALL_TESTS_PASSED");
 
       if (State.allTestsPassed) {
+        checkPhaseCheckpoint('all-passed');
         setTimeout(function() {
           sendMarcusMessage("Tests all green! Your solution handles the baseline cases. " + (State.hintUsed ? "You needed some hints — that's fine. " : "") + "Now the curveball: how would you change this for the scenario I described?");
         }, 1000);
