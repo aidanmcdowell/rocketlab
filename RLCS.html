@@ -204,6 +204,9 @@
   <a href="#archetype-2">A2 · Windows</a>
   <a href="#archetype-3">A3 · Rate Limiter</a>
   <a href="#archetype-4">A4 · State Machine</a>
+  <a href="#archetype-5">A5 · Packet Loss</a>
+  <a href="#archetype-6">A6 · OOL Alarms</a>
+  <a href="#archetype-7">A7 · CMD ACK</a>
   <a href="#section-4">4 · Bugs</a>
   <a href="#section-5">5 · Scripts</a>
   <a href="#section-6">6 · Q&amp;A</a>
@@ -244,6 +247,12 @@
       <a href="#archetype-3" class="nav-btn">A3 · Rate Limiter</a></li>
     <li>Mentions <em>flight stages, transitions, state sequence, ABORT, illegal jump</em> →
       <a href="#archetype-4" class="nav-btn">A4 · State Machine</a></li>
+    <li>Mentions <em>seq_num, sequence counter, dropped frames, RF drop, packet loss, gap</em> →
+      <a href="#archetype-5" class="nav-btn">A5 · Packet Loss</a></li>
+    <li>Mentions <em>OOL, Out-of-Limits, yellow limit, red limit, alarm, WARNING, CRITICAL, abort threshold</em> →
+      <a href="#archetype-6" class="nav-btn">A6 · OOL Alarms</a></li>
+    <li>Mentions <em>ACK, command acknowledgment, uplink, timeout, CONFIRMED, REJECTED, round-trip</em> →
+      <a href="#archetype-7" class="nav-btn">A7 · CMD ACK</a></li>
   </ul>
   <p><strong>Step 2 — Ask clarifying questions while reading:</strong>
     <a href="#section-2" class="nav-btn">2 · Clarifying Questions</a>
@@ -580,6 +589,218 @@
   <tr><td><code>[]</code></td><td>❌ No events provided</td></tr>
   <tr><td><code>["PRE_LAUNCH","BOOST","WARP_DRIVE"]</code></td><td>❌ WARP_DRIVE not in allowed</td></tr>
 </table>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 5
+───────────────────────────────────────────── -->
+<h3 id="archetype-5">
+  Archetype 5 · Telemetry Packet Loss &amp; Sequence Continuity
+  <span class="tag tag-blue">Scenario 5</span>
+  <span class="tag tag-green">detect_packet_drops</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: seq_num, sequence counter, monotonic, dropped frames, packet loss, RF drop, gap, loss_rate_pct, frame_gap</em></p>
+
+<p><strong>The 4-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard empty → return <code>{received:0, dropped:0, loss_rate_pct:0.0, missing_seqs:[]}</code></li>
+  <li>Extract valid seq_nums with <code>.get()</code> + <code>isinstance</code> check, sort them</li>
+  <li>Span = <code>(last_seq - first_seq) + 1</code> — this is <em>expected</em> count, not received</li>
+  <li>Convert to <code>set()</code>, loop <code>range(first, last+1)</code> — anything missing goes in <code>missing[]</code></li>
+</ol>
+
+<pre><code><span class="kw">def</span> <span class="fn">detect_packet_drops</span>(packets):
+    <span class="com"># SAY: "Guard empty input first — can't index an empty list"</span>
+    <span class="kw">if not</span> packets:
+        <span class="kw">return</span> {<span class="str">"received"</span>: <span class="num">0</span>, <span class="str">"dropped"</span>: <span class="num">0</span>, <span class="str">"loss_rate_pct"</span>: <span class="num">0.0</span>, <span class="str">"missing_seqs"</span>: []}
+
+    <span class="com"># SAY: "Filter with .get() — skip None seq_nums and non-dict packets"</span>
+    valid_seqs = sorted([
+        p.get(<span class="str">"seq_num"</span>)
+        <span class="kw">for</span> p <span class="kw">in</span> packets
+        <span class="kw">if</span> isinstance(p, dict) <span class="kw">and</span> p.get(<span class="str">"seq_num"</span>) <span class="kw">is not None</span>
+    ])
+
+    <span class="kw">if not</span> valid_seqs:
+        <span class="kw">return</span> {<span class="str">"received"</span>: <span class="num">0</span>, <span class="str">"dropped"</span>: <span class="num">0</span>, <span class="str">"loss_rate_pct"</span>: <span class="num">0.0</span>, <span class="str">"missing_seqs"</span>: []}
+
+    first_seq = valid_seqs[<span class="num">0</span>]
+    last_seq  = valid_seqs[-<span class="num">1</span>]
+    expected_count = (last_seq - first_seq) + <span class="num">1</span>   <span class="com"># SAY: "Span of expected IDs"</span>
+    received_set   = set(valid_seqs)               <span class="com"># SAY: "O(1) membership check"</span>
+
+    missing = []
+    <span class="kw">for</span> num <span class="kw">in</span> range(first_seq, last_seq + <span class="num">1</span>):
+        <span class="kw">if</span> num <span class="kw">not in</span> received_set:
+            missing.append(num)
+
+    dropped_count = len(missing)
+    <span class="com"># SAY: "Loss rate over EXPECTED span — not over received"</span>
+    loss_pct = round((dropped_count / expected_count) * <span class="num">100.0</span>, <span class="num">2</span>)
+
+    <span class="kw">return</span> {
+        <span class="str">"received"</span>     : len(valid_seqs),
+        <span class="str">"dropped"</span>      : dropped_count,
+        <span class="str">"loss_rate_pct"</span>: loss_pct,
+        <span class="str">"missing_seqs"</span> : missing
+    }</code></pre>
+
+<table>
+  <tr><th>Input (seq_nums)</th><th>received</th><th>dropped</th><th>missing_seqs</th><th>loss_rate_pct</th></tr>
+  <tr><td><code>[101,102,104,105]</code></td><td>4</td><td>1</td><td><code>[103]</code></td><td>20.0%</td></tr>
+  <tr><td><code>[10,11,12]</code></td><td>3</td><td>0</td><td><code>[]</code></td><td>0.0%</td></tr>
+  <tr><td><code>[]</code></td><td>0</td><td>0</td><td><code>[]</code></td><td>0.0%</td></tr>
+  <tr><td><code>[5, None, 7]</code> (None skipped)</td><td>2</td><td>1</td><td><code>[6]</code></td><td>50.0%</td></tr>
+</table>
+
+<p><strong>Key trap:</strong> Loss rate denominator = <em>expected span</em> (last − first + 1), <strong>not</strong> received count. 4 received out of span 5 → 20% loss, not 25%.</p>
+
+<p><strong>Curveball:</strong> <em>"The seq_num wraps at 65535 (16-bit). How does your detector handle [65534, 65535, 0, 1]?"</em> — Answer: naively it would report 65534 false drops. Fix: detect rollover with <code>if last_seq &lt; first_seq: last_seq += 65536</code>.</p>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 6
+───────────────────────────────────────────── -->
+<h3 id="archetype-6">
+  Archetype 6 · Out-of-Limits (OOL) Telemetry Alarm Monitor
+  <span class="tag tag-blue">Scenario 6</span>
+  <span class="tag tag-green">evaluate_telemetry_limits</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: OOL, Out-of-Limits, yellow_low/high, red_low/high, WARNING, CRITICAL, alarm_severity, abort threshold, limit band</em></p>
+
+<p><strong>The 4-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard: <code>if not telemetry_points or not limit_table: return []</code></li>
+  <li>Per point: <code>isinstance</code> check, <code>.get()</code> for sensor/value/ts, skip if unknown sensor or <code>val is None</code></li>
+  <li><strong>Red (CRITICAL) check FIRST</strong> — then <code>elif</code> Yellow (WARNING). Never check yellow before red.</li>
+  <li>Append alarm dict only if <code>severity</code> is not <code>None</code></li>
+</ol>
+
+<pre><code><span class="kw">def</span> <span class="fn">evaluate_telemetry_limits</span>(telemetry_points, limit_table):
+    <span class="kw">if not</span> telemetry_points <span class="kw">or not</span> limit_table:
+        <span class="kw">return</span> []
+
+    alarms = []
+    <span class="kw">for</span> point <span class="kw">in</span> telemetry_points:
+        <span class="kw">if not</span> isinstance(point, dict):
+            <span class="kw">continue</span>
+        sensor = point.get(<span class="str">"sensor"</span>)
+        val    = point.get(<span class="str">"value"</span>)
+        ts     = point.get(<span class="str">"timestamp"</span>)
+
+        <span class="kw">if</span> sensor <span class="kw">not in</span> limit_table <span class="kw">or</span> val <span class="kw">is None</span>:
+            <span class="kw">continue</span>
+
+        limits   = limit_table[sensor]
+        severity = <span class="kw">None</span>
+
+        <span class="com"># SAY: "Red check FIRST — critical violations take precedence"</span>
+        <span class="kw">if</span> val &lt; limits.get(<span class="str">"red_low"</span>,  float(<span class="str">'-inf'</span>)) <span class="kw">or</span> \
+           val &gt; limits.get(<span class="str">"red_high"</span>, float(<span class="str">'inf'</span>)):
+            severity = <span class="str">"CRITICAL"</span>
+        <span class="kw">elif</span> val &lt; limits.get(<span class="str">"yellow_low"</span>,  float(<span class="str">'-inf'</span>)) <span class="kw">or</span> \
+             val &gt; limits.get(<span class="str">"yellow_high"</span>, float(<span class="str">'inf'</span>)):
+            severity = <span class="str">"WARNING"</span>
+
+        <span class="kw">if</span> severity:
+            alarms.append({
+                <span class="str">"sensor"</span>  : sensor,
+                <span class="str">"value"</span>   : val,
+                <span class="str">"severity"</span>: severity,
+                <span class="str">"timestamp"</span>: ts
+            })
+    <span class="kw">return</span> alarms</code></pre>
+
+<table>
+  <tr><th>pressure_psi value</th><th>Yellow [2800–3200]</th><th>Red [2500–3500]</th><th>Alarm</th></tr>
+  <tr><td>3000</td><td>✅ nominal</td><td>✅ nominal</td><td>None</td></tr>
+  <tr><td>3300</td><td>❌ above 3200</td><td>✅ nominal</td><td>WARNING</td></tr>
+  <tr><td>3600</td><td>❌</td><td>❌ above 3500</td><td>CRITICAL</td></tr>
+  <tr><td>2400</td><td>❌</td><td>❌ below 2500</td><td>CRITICAL</td></tr>
+  <tr><td>None</td><td>—</td><td>—</td><td>Skipped</td></tr>
+</table>
+
+<p><strong>Key trap:</strong> Use <code>float('-inf')</code> / <code>float('inf')</code> as <code>.get()</code> defaults so missing limit keys never raise a <code>TypeError</code>.</p>
+
+<p><strong>Curveball:</strong> <em>"Transient spikes — alert only after 3 consecutive OOL readings."</em> — Answer: add a <code>consecutive = {}</code> dict tracking per-sensor streak; only emit alarm when <code>consecutive[sensor] &gt;= 3</code>.</p>
+
+<!-- ─────────────────────────────────────────────
+     ARCHETYPE 7
+───────────────────────────────────────────── -->
+<h3 id="archetype-7">
+  Archetype 7 · Uplink Command ACK &amp; Timeout Tracker
+  <span class="tag tag-blue">Scenario 7</span>
+  <span class="tag tag-green">verify_command_acks</span>
+</h3>
+<a href="#visual-map" class="back-btn">⬆️ Back to Map</a>
+<a href="#phase-1" class="back-btn">↩️ Back to Phase 1</a>
+<a href="#phase-2" class="back-btn">↩️ Back to Phase 2</a>
+
+<p><em>Keywords: ACK, command acknowledgment, uplink, telemetry_ack, round_trip_latency, command_timeout, CONFIRMED, REJECTED, TIMEOUT</em></p>
+
+<p><strong>The 3-Step Mental Model:</strong></p>
+<ol>
+  <li>Guard: <code>if not commands: return {}</code>. Build ACK index: <code>ack_map = {a["cmd_id"]: a for a in (acks or [])}</code></li>
+  <li>Loop commands with <code>.get()</code> — skip missing <code>cmd_id</code> or <code>sent_time</code></li>
+  <li>If <code>cmd_id not in ack_map</code> → <code>"TIMEOUT"</code>. Else check <code>status == "REJECTED"</code> first, then timing: <code>ack_time - sent_time &lt;= timeout_sec</code></li>
+</ol>
+
+<pre><code><span class="kw">def</span> <span class="fn">verify_command_acks</span>(commands, acks):
+    <span class="kw">if not</span> commands:
+        <span class="kw">return</span> {}
+
+    <span class="com"># SAY: "Index ACKs by cmd_id for O(1) lookup — never loop inside a loop"</span>
+    ack_map = {}
+    <span class="kw">for</span> a <span class="kw">in</span> (acks <span class="kw">or</span> []):    <span class="com"># (acks or []) handles None acks safely</span>
+        <span class="kw">if</span> isinstance(a, dict) <span class="kw">and</span> <span class="str">"cmd_id"</span> <span class="kw">in</span> a:
+            ack_map[a[<span class="str">"cmd_id"</span>]] = a
+
+    results = {}
+    <span class="kw">for</span> cmd <span class="kw">in</span> commands:
+        <span class="kw">if not</span> isinstance(cmd, dict):
+            <span class="kw">continue</span>
+        cid     = cmd.get(<span class="str">"cmd_id"</span>)
+        sent    = cmd.get(<span class="str">"sent_time"</span>)
+        timeout = cmd.get(<span class="str">"timeout_sec"</span>, <span class="num">5.0</span>)
+
+        <span class="kw">if not</span> cid <span class="kw">or</span> sent <span class="kw">is None</span>:
+            <span class="kw">continue</span>
+
+        <span class="kw">if</span> cid <span class="kw">not in</span> ack_map:
+            results[cid] = <span class="str">"TIMEOUT"</span>       <span class="com"># No ACK received at all</span>
+            <span class="kw">continue</span>
+
+        ack        = ack_map[cid]
+        ack_time   = ack.get(<span class="str">"ack_time"</span>, float(<span class="str">'inf'</span>))
+        ack_status = ack.get(<span class="str">"status"</span>)
+
+        <span class="com"># SAY: "REJECTED check before timing — status takes priority"</span>
+        <span class="kw">if</span> ack_status == <span class="str">"REJECTED"</span>:
+            results[cid] = <span class="str">"REJECTED"</span>
+        <span class="kw">elif</span> ack_time - sent &lt;= timeout:
+            results[cid] = <span class="str">"CONFIRMED"</span>
+        <span class="kw">else</span>:
+            results[cid] = <span class="str">"TIMEOUT"</span>       <span class="com"># ACK arrived, but too late</span>
+
+    <span class="kw">return</span> results</code></pre>
+
+<table>
+  <tr><th>cmd_id</th><th>sent_time</th><th>timeout_sec</th><th>ack_time</th><th>ack_status</th><th>Result</th></tr>
+  <tr><td>CMD_001</td><td>100.0</td><td>5.0</td><td>103.0</td><td>OK</td><td>✅ CONFIRMED</td></tr>
+  <tr><td>CMD_002</td><td>200.0</td><td>3.0</td><td>210.0</td><td>OK</td><td>⏱ TIMEOUT (10s &gt; 3s)</td></tr>
+  <tr><td>CMD_003</td><td>300.0</td><td>5.0</td><td>302.0</td><td>REJECTED</td><td>❌ REJECTED</td></tr>
+  <tr><td>CMD_004</td><td>400.0</td><td>5.0</td><td>—</td><td>—</td><td>⏱ TIMEOUT (no ACK)</td></tr>
+</table>
+
+<p><strong>Key trap:</strong> Use <code>(acks or [])</code> — if the caller passes <code>acks=None</code>, iterating over <code>None</code> raises a <code>TypeError</code>. The <code>or []</code> idiom handles it silently.</p>
+
+<p><strong>Curveball:</strong> <em>"Spacecraft sends two ACKs per command: Accepted + Executed. A REJECTED on Executed means it accepted but failed mid-execution."</em> — Answer: store a <em>list</em> of ACKs per <code>cmd_id</code>; take the <em>last</em> ACK as the definitive status.</p>
 
 <hr>
 
