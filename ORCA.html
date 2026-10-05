@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPA ORCA — Tactical C5ISR & Wargaming Simulation Console</title>
+<meta name="description" content="SPA ORCA Group interactive tactical C5ISR wargaming console with live radar, threat engagement, and OOP interview practice sandbox.">
+<link rel="stylesheet" href="orca-styles.css">
+</head>
+<body>
+
+<!-- ================================================================
+     ORCA CONSOLE SCREEN
+================================================================ -->
+<div id="screen-orca" class="screen active">
+
+  <!-- ── TOP HEADER BAR ── -->
+  <div class="orca-header">
+    <div class="orca-header-logo">
+      <div class="orca-logo-text">SPA · SLA DIVISION</div>
+      <div class="orca-logo-sub">ORCA GROUP | SAN DIEGO, CA</div>
+    </div>
+
+    <div class="orca-divider"></div>
+    <div class="orca-classif">UNCLASSIFIED // M&S DEMO</div>
+
+    <div class="orca-divider"></div>
+    <div style="font-size:10px;color:var(--text-secondary);letter-spacing:0.5px;">
+      TACTICAL C5ISR &amp; WARFIGHTING SIMULATION CONSOLE
+    </div>
+
+    <div class="orca-time-group">
+      <div class="orca-zulu" id="orcaZuluTime">--:--:--Z</div>
+
+      <div class="sim-speed-controls">
+        <button class="sim-speed-btn" data-speed="pause" title="Pause">⏸ PAUSE</button>
+        <button class="sim-speed-btn active" data-speed="1">1×</button>
+        <button class="sim-speed-btn" data-speed="2">2×</button>
+        <button class="sim-speed-btn" data-speed="5">5×</button>
+      </div>
+
+      <button class="hdr-nav-btn" onclick="window.location.href='index.html'">← LAUNCHER</button>
+      <button class="hdr-nav-btn" onclick="openCheatsheet()">📋 CHEATSHEET</button>
+    </div>
+  </div>
+
+  <!-- ── LEFT: TRACK LIST & SENSOR FEED ── -->
+  <div class="panel-tracks">
+    <div class="panel-header">
+      <div class="panel-title">📡 LIVE TRACK FEED</div>
+      <div class="panel-count" id="trackCount">0 TRACKS</div>
+    </div>
+
+    <div class="track-list" id="trackList">
+      <!-- Populated by orca-engine.js -->
+    </div>
+
+    <!-- Sensor Status -->
+    <div class="sensor-feed">
+      <div class="sensor-feed-title">Sensor Suite Status</div>
+
+      <div class="sensor-item">
+        <div class="sensor-dot online" id="sensor-dot-radar"></div>
+        <div class="sensor-name">AN/SPY-6 AMDR Radar</div>
+        <div class="sensor-status" id="sensor-status-radar">ONLINE</div>
+      </div>
+      <div class="sensor-item">
+        <div class="sensor-dot online" id="sensor-dot-sonar"></div>
+        <div class="sensor-name">SQQ-89 Active Sonar</div>
+        <div class="sensor-status" id="sensor-status-sonar">ONLINE</div>
+      </div>
+      <div class="sensor-item">
+        <div class="sensor-dot online" id="sensor-dot-esm"></div>
+        <div class="sensor-name">AN/SLQ-32 ESM Suite</div>
+        <div class="sensor-status" id="sensor-status-esm">ONLINE</div>
+      </div>
+      <div class="sensor-item">
+        <div class="sensor-dot online" id="sensor-dot-ais"></div>
+        <div class="sensor-name">AIS / NTDS Network</div>
+        <div class="sensor-status" id="sensor-status-ais">ONLINE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: TACTICAL RADAR PPI ── -->
+  <div class="panel-radar">
+    <div class="radar-toolbar">
+      <span style="font-size:9px;color:var(--text-dim);font-family:var(--font-mono);letter-spacing:1px;margin-right:4px;">RANGE</span>
+      <button class="radar-range-btn" data-range="25">25 NM</button>
+      <button class="radar-range-btn active" data-range="50">50 NM</button>
+      <button class="radar-range-btn" data-range="100">100 NM</button>
+
+      <div style="width:1px;height:18px;background:var(--border-md);margin:0 6px;"></div>
+
+      <button class="radar-action-btn spawn"     id="btnSpawnSwarm">⚠ SPAWN SWARM</button>
+      <button class="radar-action-btn intercept" id="btnInterceptSM6">⚡ INTERCEPT SM-6</button>
+      <button class="radar-action-btn noise"     id="btnInjectNoise">📡 INJECT NOISE</button>
+      <button class="radar-cheat-btn"            onclick="openCheatsheet()">📋 CHEATSHEET</button>
+
+      <div class="radar-fps" id="orcaFpsCounter">— FPS</div>
+    </div>
+
+    <canvas id="radarCanvas"></canvas>
+  </div>
+
+  <!-- ── RIGHT: THREAT EVALUATOR ── -->
+  <div class="panel-threat">
+    <div class="panel-header">
+      <div class="panel-title">⚠ THREAT EVALUATOR</div>
+    </div>
+
+    <div class="threat-evaluator">
+      <div class="threat-section-title">Priority Queue — Ascending TTI</div>
+      <div id="threatEvaluatorList">
+        <!-- Populated by engine -->
+      </div>
+    </div>
+
+    <!-- Weapon Magazine -->
+    <div class="weapon-status">
+      <div class="weapon-title">Interceptor Magazine — DDG-79 OSCAR AUSTIN</div>
+      <div class="weapon-row">
+        <div class="weapon-name">SM-6 Blk IB</div>
+        <div class="weapon-mag" id="magSM6"></div>
+      </div>
+      <div class="weapon-row">
+        <div class="weapon-name">ESSM Blk 2</div>
+        <div class="weapon-mag" id="magEWM"></div>
+      </div>
+    </div>
+
+    <!-- Track Inspector -->
+    <div class="inspector">
+      <div class="inspector-title">📍 TRACK INSPECTOR</div>
+      <div class="inspector-id" id="inspectorId">—</div>
+      <div class="inspector-grid" id="inspectorGrid">
+        <div class="insp-none">Click a radar contact to inspect</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM: SCENARIO DOCK + EVENT LOG + WHITEBOARD ── -->
+  <div class="panel-bottom">
+
+    <!-- Scenario Injector -->
+    <div class="scenario-dock">
+      <div class="dock-title">⚡ Scenario Injector</div>
+      <div class="scenario-btn-grid">
+        <button class="scenario-inj-btn active" data-scenario="redSeaSwarm">
+          <span class="scen-icon">🌊</span>
+          <span class="scen-name">Red Sea Drone Swarm</span>
+          <span class="scen-desc">USV + ASCM saturation — mag economy</span>
+        </button>
+        <button class="scenario-inj-btn" data-scenario="aswIslandChain">
+          <span class="scen-icon">🌊</span>
+          <span class="scen-name">Island Chain ASW</span>
+          <span class="scen-desc">Noisy sonobuoy SSK correlation</span>
+        </button>
+        <button class="scenario-inj-btn" data-scenario="hypersonicDefense">
+          <span class="scen-icon">⚡</span>
+          <span class="scen-name">HGV Defense</span>
+          <span class="scen-desc">Mach 6+ — 18-second window</span>
+        </button>
+        <button class="scenario-inj-btn" data-scenario="degradedC5ISR">
+          <span class="scen-icon">📡</span>
+          <span class="scen-name">Degraded C5ISR / EW</span>
+          <span class="scen-desc">Cyber jamming — ghost track filter</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="event-log">
+      <div class="dock-title">📋 Event Log</div>
+      <div class="event-log-list" id="eventLogList">
+        <!-- Populated by engine -->
+      </div>
+    </div>
+
+    <!-- OOP Whiteboard Code Lab -->
+    <div class="whiteboard-dock">
+      <div class="wb-header">
+        <div class="wb-title">🖊 OOP Code Lab</div>
+
+        <select class="wb-problem-select" id="wbProblemSelect">
+          <option value="trackIngestion">Track Ingestion &amp; Boundary Filter</option>
+          <option value="threatAllocator">PriorityQueue Threat Allocator</option>
+          <option value="sensorParser">Sensor Parser — Factory Pattern</option>
+        </select>
+
+        <div class="wb-lang-tabs">
+          <button class="wb-lang-tab active" data-lang="java">Java</button>
+          <button class="wb-lang-tab" data-lang="csharp">C#</button>
+          <button class="wb-lang-tab" data-lang="cpp">C++</button>
+        </div>
+
+        <button class="wb-run-btn" id="wbRunBtn">▶ RUN TESTS</button>
+        <button class="wb-run-btn" id="wbSolBtn" style="background:var(--amber-dim);color:var(--amber);border-color:rgba(245,158,11,0.4);margin-left:4px;">💡 SOLUTION</button>
+      </div>
+
+      <div class="wb-body">
+        <div class="wb-editor-wrap">
+          <textarea class="wb-code" id="wbCodeEditor"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            autocomplete="off"
+            data-gramm="false"></textarea>
+        </div>
+
+        <div class="wb-output" id="wbOutput">
+          <div class="wb-output-line info">[ CODE LAB ] Ready — select a problem above.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /screen-orca -->
+
+
+<!-- ================================================================
+     CHEATSHEET MODAL
+================================================================ -->
+<div class="modal-overlay" id="cheatsheetModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📋 SPA ORCA Interview Cheatsheet — Aidan McDowell</div>
+      <button class="modal-close" onclick="closeCheatsheet()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('tab-java')">Java vs C# Syntax</button>
+        <button class="modal-tab" onclick="switchTab('tab-framework')">5-Step Framework</button>
+        <button class="modal-tab" onclick="switchTab('tab-patterns')">Defense Archetypes</button>
+        <button class="modal-tab" onclick="switchTab('tab-hiring')">Hiring Team Tips</button>
+      </div>
+
+      <!-- TAB 1: Java vs C# -->
+      <div class="modal-tab-panel active" id="tab-java">
+        <div class="cs-section">
+          <div class="cs-section-title">Quick Java Transition — C# Developer Reference</div>
+          <table class="cs-table">
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>C# (your comfort zone)</th>
+                <th class="java-col">Java (interview target)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="concept">Inheritance / Interfaces</td>
+                <td><code>class Radar : Sensor, ITrackable</code></td>
+                <td class="java-col"><code>class Radar extends Sensor implements Trackable</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Standard Output</td>
+                <td><code>Console.WriteLine(...)</code></td>
+                <td class="java-col"><code>System.out.println(...)</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Dynamic List</td>
+                <td><code>List&lt;T&gt; list = new List&lt;T&gt;();</code></td>
+                <td class="java-col"><code>List&lt;T&gt; list = new ArrayList&lt;&gt;();</code></td>
+              </tr>
+              <tr>
+                <td class="concept">List Size</td>
+                <td><code>list.Count</code></td>
+                <td class="java-col"><code>list.size()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Hash Map / Dictionary</td>
+                <td><code>Dictionary&lt;K,V&gt; map = new();</code></td>
+                <td class="java-col"><code>Map&lt;K,V&gt; map = new HashMap&lt;&gt;();</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Map Operations</td>
+                <td><code>map[k]=v; map.ContainsKey(k);</code></td>
+                <td class="java-col"><code>map.put(k,v); map.containsKey(k);</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Map Get with Default</td>
+                <td><code>map.GetValueOrDefault(k, def)</code></td>
+                <td class="java-col"><code>map.getOrDefault(k, def)</code></td>
+              </tr>
+              <tr>
+                <td class="concept">String Length</td>
+                <td><code>str.Length</code></td>
+                <td class="java-col"><code>str.length()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">String Empty Check</td>
+                <td><code>string.IsNullOrEmpty(s)</code></td>
+                <td class="java-col"><code>s == null || s.isEmpty()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Base Class Call</td>
+                <td><code>base.Method()</code></td>
+                <td class="java-col"><code>super.method()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Constants</td>
+                <td><code>const int MAX = 100;</code></td>
+                <td class="java-col"><code>final int MAX = 100;</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Priority Queue</td>
+                <td><code>SortedSet / PriorityQueue&lt;T&gt; (NET 6+)</code></td>
+                <td class="java-col"><code>PriorityQueue&lt;T&gt; pq = new PriorityQueue&lt;&gt;((a,b) -&gt; Double.compare(a.tti, b.tti));</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Thread-Safe Map</td>
+                <td><code>ConcurrentDictionary&lt;K,V&gt;</code></td>
+                <td class="java-col"><code>ConcurrentHashMap&lt;K,V&gt;</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Null check</td>
+                <td><code>obj is null / obj != null</code></td>
+                <td class="java-col"><code>obj == null / obj != null</code></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="cs-tip">
+            <div class="cs-tip-icon">💡</div>
+            <p><strong>Freeze recovery:</strong> If you blank on a specific Java method name, state your intent aloud: <em>"In Java I'd use <code>map.getOrDefault()</code> — same semantics as C#'s <code>GetValueOrDefault()</code>."</em> Interviewers evaluate logic and architecture, not memorized accessors.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: 5-Step Framework -->
+      <div class="modal-tab-panel" id="tab-framework">
+        <div class="cs-section">
+          <div class="cs-section-title">5-Step Incomplete Problem Execution Framework</div>
+          <div class="framework-grid">
+            <div class="framework-card">
+              <div class="fw-title">① Read & Trace Aloud</div>
+              <div class="fw-step">Don't touch the marker yet — read every line.</div>
+              <div class="fw-step">Narrate the class hierarchy: "We have an abstract <code>Track</code> base, a <code>RadarTrack</code> subclass, and an unimplemented <code>processSensorFeed()</code>."</div>
+              <div class="fw-step">Identify what the caller expects back (return type, side effects).</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">② Clarify Constraints</div>
+              <div class="fw-step">Ask 2–3 edge-case questions before coding.</div>
+              <div class="fw-step">"Can sensor records arrive out of order?"</div>
+              <div class="fw-step">"How do we handle duplicate track IDs — overwrite or append?"</div>
+              <div class="fw-step">"Scale: 10 tracks/sec or 50,000 in a batch simulation loop?"</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">③ Identify the Gap</div>
+              <div class="fw-step"><strong>Missing Polymorphism:</strong> base class needs an abstract method dispatched by subtype.</div>
+              <div class="fw-step"><strong>Wrong Data Structure:</strong> ArrayList where a PriorityQueue or HashMap is needed.</div>
+              <div class="fw-step"><strong>Unhandled Boundary:</strong> no null checks, no OOB guard, no divide-by-zero protection.</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">④ Implement Cleanly</div>
+              <div class="fw-step">Write OOP code — no giant 40-line methods.</div>
+              <div class="fw-step">Extract private helpers: <code>isValidTrack()</code>, <code>calculateBearing()</code>.</div>
+              <div class="fw-step">State pattern choices: "I'm using a <code>PriorityQueue</code> for O(log n) insertion — better than a sorted ArrayList re-sort each tick."</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">⑤ Dry-Run Edge Cases</div>
+              <div class="fw-step">Walk through test cases with concrete values.</div>
+              <div class="fw-step">Null payload → returned early, no crash.</div>
+              <div class="fw-step">Duplicate ID → overwrites (no stale entry).</div>
+              <div class="fw-step">Empty list → returns <code>emptyList()</code>, no NPE.</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">⑥ Complexity Analysis</div>
+              <div class="fw-step">State Big-O: "ingest is O(1) with HashMap vs O(n) linear scan."</div>
+              <div class="fw-step">For PriorityQueue threat sort: O(n log n) once, O(log n) per insertion.</div>
+              <div class="fw-step">Mention thread safety if concurrent simulation loops are implied.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Defense Archetypes -->
+      <div class="modal-tab-panel" id="tab-patterns">
+        <div class="cs-section">
+          <div class="cs-section-title">Archetype A — Threat Priority Queue (Min-Heap by TTI)</div>
+          <div class="cs-code-block"><pre><span class="keyword">public</span> List&lt;Track&gt; getHighestPriorityThreats(List&lt;Track&gt; tracks, <span class="keyword">int</span> k) {
+    <span class="comment">// Guard: null/empty/k≤0</span>
+    <span class="keyword">if</span> (tracks == <span class="keyword">null</span> || tracks.isEmpty() || k &lt;= <span class="number">0</span>)
+        <span class="keyword">return</span> Collections.emptyList();
+
+    <span class="comment">// Min-heap: smallest TTI = highest threat priority</span>
+    PriorityQueue&lt;Track&gt; pq = <span class="keyword">new</span> PriorityQueue&lt;&gt;(
+        (a, b) -&gt; Double.compare(a.getTimeToImpact(), b.getTimeToImpact())
+    );
+
+    <span class="keyword">for</span> (Track t : tracks) {
+        <span class="keyword">if</span> (t.isHostile() &amp;&amp; !t.isNeutralized())
+            pq.offer(t);
+    }
+
+    List&lt;Track&gt; result = <span class="keyword">new</span> ArrayList&lt;&gt;();
+    <span class="keyword">while</span> (!pq.isEmpty() &amp;&amp; result.size() &lt; k)
+        result.add(pq.poll());
+    <span class="keyword">return</span> result;
+}</pre></div>
+          <div class="cs-tip">
+            <div class="cs-tip-icon">🎯</div>
+            <p>Key insight: <strong>lowest TTI = highest danger</strong> so the min-heap gives you the most critical threat at the top. Pk formula: <code>Pk_total = 1 - (1 - Pk_shot)^n</code></p>
+          </div>
+        </div>
+
+        <div class="cs-section">
+          <div class="cs-section-title">Archetype B — Factory Pattern Sensor Parser</div>
+          <div class="cs-code-block"><pre><span class="comment">// Interface — open for new sensor types without modifying ingest()</span>
+<span class="keyword">public interface</span> <span class="type-name">SensorParser</span> {
+    Track parseRecord(<span class="keyword">byte</span>[] rawPayload);
+}
+
+<span class="keyword">public class</span> <span class="type-name">SensorIngestionService</span> {
+    <span class="keyword">private final</span> Map&lt;SensorType, SensorParser&gt; parsers = <span class="keyword">new</span> HashMap&lt;&gt;();
+    <span class="keyword">private final</span> Map&lt;String, Track&gt; activeTracks = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;();
+
+    <span class="keyword">public void</span> registerParser(SensorType type, SensorParser parser) {
+        parsers.put(type, parser);   <span class="comment">// Open/Closed: add types without editing ingest()</span>
+    }
+
+    <span class="keyword">public void</span> ingest(SensorType type, <span class="keyword">byte</span>[] rawData) {
+        SensorParser parser = parsers.get(type);
+        <span class="keyword">if</span> (parser == <span class="keyword">null</span>)
+            <span class="keyword">throw new</span> IllegalArgumentException(<span class="string">"No parser for "</span> + type);
+        Track track = parser.parseRecord(rawData);
+        <span class="keyword">if</span> (track != <span class="keyword">null</span> &amp;&amp; track.isValid())
+            activeTracks.put(track.getTrackId(), track);
+    }
+}</pre></div>
+          <div class="cs-warn">
+            <div class="cs-tip-icon">⚠</div>
+            <p><strong>What they're testing:</strong> Did you replace the brittle <code>if/else-if</code> chain? Can you name the OOP principle violated? (<em>Open/Closed Principle</em> — open for extension, closed for modification.)</p>
+          </div>
+        </div>
+
+        <div class="cs-section">
+          <div class="cs-section-title">Archetype C — Track Ingestion & Boundary Filter</div>
+          <div class="cs-code-block"><pre><span class="keyword">public void</span> ingest(Track track) {
+    <span class="comment">// 1. Null guard</span>
+    <span class="keyword">if</span> (track == <span class="keyword">null</span>) <span class="keyword">return</span>;
+
+    <span class="comment">// 2. ID guard</span>
+    <span class="keyword">if</span> (track.getTrackId() == <span class="keyword">null</span> || track.getTrackId().isEmpty()) <span class="keyword">return</span>;
+
+    <span class="comment">// 3. Coordinate bounds</span>
+    <span class="keyword">double</span> lat = track.getLat(), lon = track.getLon();
+    <span class="keyword">if</span> (lat &lt; -<span class="number">90.0</span> || lat &gt; <span class="number">90.0</span> || lon &lt; -<span class="number">180.0</span> || lon &gt; <span class="number">180.0</span>) <span class="keyword">return</span>;
+
+    <span class="comment">// 4 + 5. Upsert (overwrite existing or insert new)</span>
+    activeTracks.put(track.getTrackId(), track);
+}</pre></div>
+        </div>
+      </div>
+
+      <!-- TAB 4: Hiring Team Tips -->
+      <div class="modal-tab-panel" id="tab-hiring">
+        <div class="cs-section">
+          <div class="cs-section-title">Hiring Team Dynamics — ORCA Group</div>
+          <div class="framework-grid">
+            <div class="framework-card">
+              <div class="fw-title">🎯 Software Serving Analysis</div>
+              <div class="fw-step">Frame your code as an enabler for OR analysts — not as a standalone product.</div>
+              <div class="fw-step">"I write software that analysts can <em>trust to brief Pentagon leadership</em>."</div>
+              <div class="fw-step">Emphasize deterministic, reproducible simulation behavior — same inputs → same outputs.</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">🏢 Clearance + Onsite Commitment</div>
+              <div class="fw-step">Reaffirm daily onsite readiness in San Diego — classified work can't leave the building.</div>
+              <div class="fw-step">Mention awareness of ITAR, secure lab procedures, and hardware-in-the-loop constraints.</div>
+              <div class="fw-step">This signals cultural fit with defense contractor pace and accountability.</div>
+            </div>
+            <div class="framework-card">
+              <div class="fw-title">🤝 Analysts ↔ Engineers</div>
+              <div class="fw-step">Analysts know naval combat, RCS, and Mach numbers — you know data structures and latency.</div>
+              <div class="fw-step">Highlight ability to translate fuzzy domain requirements into rigid, testable classes.</div>
+              <div class="fw-step">"I ask what decision the analyst needs to make, then design the schema around that."</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cs-section">
+          <div class="cs-section-title">Language Strategy on the Whiteboard</div>
+          <div class="cs-tip">
+            <div class="cs-tip-icon">✅</div>
+            <p><strong>Use Java or C#.</strong> The team works primarily in Java but accepts C#. Both languages share nearly identical OOP runtime semantics. Pick whichever you can write most fluently on a whiteboard.</p>
+          </div>
+          <div class="cs-warn">
+            <div class="cs-tip-icon">⚠</div>
+            <p><strong>Avoid C++ on the whiteboard</strong> unless the prompt is explicitly in C++. Manual memory management, pointer syntax ambiguities, and verbose STL signatures (<code>std::unordered_map&lt;std::string, std::shared_ptr&lt;Entity&gt;&gt;</code>) introduce unnecessary risk under time pressure.</p>
+          </div>
+        </div>
+
+        <div class="cs-section">
+          <div class="cs-section-title">Key Phrases to Use in the Room</div>
+          <table class="cs-table">
+            <thead><tr><th>Moment</th><th>What to Say</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="concept">When you blank on a method name</td>
+                <td>"In Java I'd use <code>map.getOrDefault()</code> — equivalent to C#'s <code>GetValueOrDefault()</code>. Same O(1) lookup semantics."</td>
+              </tr>
+              <tr>
+                <td class="concept">When choosing a data structure</td>
+                <td>"I'm using a <code>PriorityQueue</code> here because the threat evaluator needs O(log n) insertion and O(1) peek at the highest-priority target."</td>
+              </tr>
+              <tr>
+                <td class="concept">When asked about the if/else chain</td>
+                <td>"This violates the Open/Closed Principle — adding a new sensor type requires editing existing, tested code. A registry pattern isolates that change."</td>
+              </tr>
+              <tr>
+                <td class="concept">When checking edge cases</td>
+                <td>"Three edge cases I always test: null input, empty collection, and boundary values. Let me walk through each."</td>
+              </tr>
+              <tr>
+                <td class="concept">When done implementing</td>
+                <td>"I'd add a unit test suite with JUnit — one test per acceptance criterion, so analysts can verify model behavior before a brief."</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+  </div><!-- /modal-box -->
+</div><!-- /cheatsheet modal -->
+
+<script>
+  // Modal controls
+  function openCheatsheet() {
+    document.getElementById('cheatsheetModal').classList.add('open');
+  }
+  function closeCheatsheet() {
+    document.getElementById('cheatsheetModal').classList.remove('open');
+  }
+  function switchTab(tabId) {
+    document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+  }
+  document.getElementById('cheatsheetModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCheatsheet();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCheatsheet();
+  });
+</script>
+
+<script src="orca-scenarios.js"></script>
+<script src="orca-whiteboard.js"></script>
+<script src="orca-engine.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', initORCA);
+</script>
+
+</body>
+</html>
