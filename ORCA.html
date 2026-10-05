@@ -166,27 +166,27 @@
 
     <!-- Scenario Injector -->
     <div class="scenario-dock">
-      <div class="dock-title">⚡ Scenario Injector</div>
+      <div class="dock-title">⚡ Operational Scenarios &amp; Whiteboard Archetypes</div>
       <div class="scenario-btn-grid">
-        <button class="scenario-inj-btn active" data-scenario="redSeaSwarm">
+        <button class="scenario-inj-btn active" data-scenario="aswIslandChain" title="Top Probability Whiteboard Archetype (~40% Odds)">
           <span class="scen-icon">🌊</span>
-          <span class="scen-name">Red Sea Drone Swarm</span>
-          <span class="scen-desc">USV + ASCM saturation — mag economy</span>
+          <span class="scen-name">[40% ODDS] Island Chain ASW</span>
+          <span class="scen-desc">Track Correlator &amp; Stale Eviction (Map &amp; Iterator)</span>
         </button>
-        <button class="scenario-inj-btn" data-scenario="aswIslandChain">
-          <span class="scen-icon">🌊</span>
-          <span class="scen-name">Island Chain ASW</span>
-          <span class="scen-desc">Noisy sonobuoy SSK correlation</span>
+        <button class="scenario-inj-btn" data-scenario="desTimeline" title="Second Highest Probability (~30% Odds)">
+          <span class="scen-icon">⏱️</span>
+          <span class="scen-name">[30% ODDS] Discrete-Event Sim</span>
+          <span class="scen-desc">Operational Timeline Engine (PriorityQueue Loop)</span>
         </button>
-        <button class="scenario-inj-btn" data-scenario="hypersonicDefense">
-          <span class="scen-icon">⚡</span>
-          <span class="scen-name">HGV Defense</span>
-          <span class="scen-desc">Mach 6+ — 18-second window</span>
+        <button class="scenario-inj-btn" data-scenario="redSeaSwarm" title="Third Archetype (~20% Odds)">
+          <span class="scen-icon">⚔️</span>
+          <span class="scen-name">[20% ODDS] Red Sea Saturation</span>
+          <span class="scen-desc">Threat Priority Allocator (Min-Heap by TTI)</span>
         </button>
-        <button class="scenario-inj-btn" data-scenario="degradedC5ISR">
+        <button class="scenario-inj-btn" data-scenario="degradedC5ISR" title="Fourth Archetype (~10% Odds)">
           <span class="scen-icon">📡</span>
-          <span class="scen-name">Degraded C5ISR / EW</span>
-          <span class="scen-desc">Cyber jamming — ghost track filter</span>
+          <span class="scen-name">[10% ODDS] Polymorphic C5ISR</span>
+          <span class="scen-desc">Sensor Stream Factory (Open/Closed Principle)</span>
         </button>
       </div>
     </div>
@@ -207,9 +207,10 @@
         </div>
 
         <select class="wb-problem-select" id="wbProblemSelect" title="Select whiteboard problem">
-          <option value="trackIngestion">1. Track Ingestion &amp; Boundary Filter</option>
-          <option value="threatAllocator">2. PriorityQueue Threat Allocator</option>
-          <option value="sensorParser">3. Extensible Sensor Parser (Factory)</option>
+          <option value="staleTrackEviction">① [40% Odds] Sensor Track Manager &amp; Stale Eviction</option>
+          <option value="desPriorityLoop">② [30% Odds] Discrete-Event Sim (DES) Priority Loop</option>
+          <option value="threatAllocator">③ [20% Odds] Threat Evaluator &amp; Weapon Allocator</option>
+          <option value="polymorphicSensorParser">④ [10% Odds] Polymorphic Sensor Stream (Factory Pattern)</option>
         </select>
 
         <div class="wb-lang-tabs">

@@ -1042,6 +1042,39 @@ function simulateTestRun(code) {
       { name: "Test 4 (Empty event list)", pass: hasReturn && hasIf },
       { name: "Test 5 (Unknown state name)", pass: hasGet || hasTransitions },
     ];
+  } else if (sc.id === "scenario_e") {
+    const hasSet = /set\(/.test(code);
+    const hasRange = /range\(/.test(code);
+    const hasSorted = /sorted/.test(code);
+    testResults = [
+      { name: "Test 1 (Basic gap detection)", pass: hasLoop && hasReturn && sizeOk && hasSet },
+      { name: "Test 2 (Empty input guard)", pass: hasReturn && /received/.test(code) },
+      { name: "Test 3 (No drops — perfect sequence)", pass: hasRange && hasReturn },
+      { name: "Test 4 (Corrupt None seq_num skipped)", pass: hasNoneCheck || hasGet },
+    ];
+  } else if (sc.id === "scenario_f") {
+    const hasCritical = /CRITICAL/.test(code);
+    const hasWarning = /WARNING/.test(code);
+    const hasElif = /elif/.test(code);
+    testResults = [
+      { name: "Test 1 (Nominal + WARNING + CRITICAL + None skipped)", pass: hasCritical && hasWarning && hasReturn && sizeOk },
+      { name: "Test 2 (Empty telemetry_points guard)", pass: hasReturn && /\[\]/.test(code) },
+      { name: "Test 3 (None limit_table guard)", pass: hasReturn && hasIf },
+      { name: "Test 4 (Red precedence over Yellow)", pass: hasCritical && hasElif },
+      { name: "Test 5 (Unknown sensor skipped)", pass: hasIf && (hasGet || /limit_table/.test(code)) },
+    ];
+  } else if (sc.id === "scenario_g") {
+    const hasAckMap = /ack_map|ack_index|acks_by/.test(code);
+    const hasConfirmed = /CONFIRMED/.test(code);
+    const hasTimeout = /TIMEOUT/.test(code);
+    const hasRejected = /REJECTED/.test(code);
+    testResults = [
+      { name: "Test 1 (CONFIRMED — ACK within timeout)", pass: hasConfirmed && hasReturn && sizeOk },
+      { name: "Test 2 (TIMEOUT — late ACK)", pass: hasTimeout && hasIf },
+      { name: "Test 3 (REJECTED — spacecraft rejected command)", pass: hasRejected && hasIf },
+      { name: "Test 4 (TIMEOUT — no ACK received)", pass: hasTimeout && (hasAckMap || hasDict) },
+      { name: "Test 5 (Empty commands guard)", pass: hasReturn && /\{\}/.test(code) },
+    ];
   }
 
   testResults.forEach(function(r, i) {
