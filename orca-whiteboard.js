@@ -609,6 +609,91 @@ class WhiteboardController {
     this.addOutputLine('info', `▸ Language: ${lang.toUpperCase()}`);
     this.addOutputLine('info', `Click "Run Tests" to validate.`);
     this.showSolution = false;
+
+    // Update Briefing Strip & Briefing Tab
+    this.updateBriefingUI(probKey, prob);
+  }
+
+  updateBriefingUI(probKey, prob) {
+    const badgeEl = document.getElementById('wbBriefingBadge');
+    const descEl  = document.getElementById('wbBriefingDesc');
+    const titleEl = document.getElementById('briefingTitle');
+    const objEl   = document.getElementById('briefingObjective');
+    const critEl  = document.getElementById('briefingCriteria');
+
+    const probNumMap = { trackIngestion: 'PROBLEM 1', threatAllocator: 'PROBLEM 2', sensorParser: 'PROBLEM 3' };
+    if (badgeEl) badgeEl.textContent = probNumMap[probKey] || 'PROBLEM';
+    if (descEl) descEl.innerHTML = `<strong>Goal:</strong> ${prob.description}`;
+    if (titleEl) titleEl.textContent = prob.name;
+    if (objEl) objEl.textContent = prob.description;
+
+    if (!critEl) return;
+
+    if (probKey === 'trackIngestion') {
+      critEl.innerHTML = `
+        <div class="framework-card">
+          <div class="fw-title">① Null &amp; Type Guards</div>
+          <div class="fw-step">Reject <code>null</code> track references immediately.</div>
+          <div class="fw-step">Reject tracks with <code>null</code> or empty string <code>trackId</code>.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">② Operational Boundaries</div>
+          <div class="fw-step">Latitude must be within <code>[-90.0, +90.0]</code> degrees.</div>
+          <div class="fw-step">Longitude must be within <code>[-180.0, +180.0]</code> degrees.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">③ Upsert Storage Semantics</div>
+          <div class="fw-step">If <code>trackId</code> exists, overwrite previous record (update).</div>
+          <div class="fw-step">If <code>trackId</code> is new, insert into collection (create).</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">④ Whiteboard Speaking Point</div>
+          <div class="fw-step">"I use a <code>HashMap</code> for O(1) ingestion lookup. In a live multi-threaded simulation loop, I'd use <code>ConcurrentHashMap</code>."</div>
+        </div>`;
+    } else if (probKey === 'threatAllocator') {
+      critEl.innerHTML = `
+        <div class="framework-card">
+          <div class="fw-title">① Null / Empty / K Guards</div>
+          <div class="fw-step">Guard against <code>null</code>, empty track list, or <code>k &lt;= 0</code>.</div>
+          <div class="fw-step">Return <code>Collections.emptyList()</code> (or empty List in C#).</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">② Filter Hostiles Only</div>
+          <div class="fw-step">Only evaluate hostile tracks: <code>t.isHostile()</code>.</div>
+          <div class="fw-step">Filter out already neutralized tracks: <code>!t.isNeutralized()</code>.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">③ Min-Heap PriorityQueue</div>
+          <div class="fw-step">Order by ascending Time-To-Impact (lowest TTI = earliest impact = top threat).</div>
+          <div class="fw-step">Java: <code>(a, b) -&gt; Double.compare(a.getTti(), b.getTti())</code></div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">④ Extract Top-K &amp; State Complexity</div>
+          <div class="fw-step">Poll from heap until empty or <code>result.size() == k</code>.</div>
+          <div class="fw-step">Complexity: O(n log n) heap build, O(k log n) extraction.</div>
+        </div>`;
+    } else if (probKey === 'sensorParser') {
+      critEl.innerHTML = `
+        <div class="framework-card">
+          <div class="fw-title">① Register Parser</div>
+          <div class="fw-step">Store the parser in the map: <code>parsers.put(type, parser)</code>.</div>
+          <div class="fw-step">Null guard against missing type or parser reference.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">② Guard Unregistered Sensor Types</div>
+          <div class="fw-step">If no parser registered for type, throw <code>IllegalArgumentException</code>.</div>
+          <div class="fw-step">Never silently drop unregistered sensor packets without an error.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">③ Validate Parsed Track</div>
+          <div class="fw-step">Parse raw bytes: <code>Track t = parser.parseRecord(data)</code>.</div>
+          <div class="fw-step">Verify track is non-null AND <code>t.isValid()</code> before storing.</div>
+        </div>
+        <div class="framework-card">
+          <div class="fw-title">④ Design Principle (Must Say Aloud)</div>
+          <div class="fw-step">"This follows the <strong>Open/Closed Principle</strong> — open for extension (adding new radar/sonar types) without modifying core ingestion code."</div>
+        </div>`;
+    }
   }
 
   runTests() {

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SPA ORCA Technical Screen & Whiteboard Cheatsheet — Aidan McDowell</title>
+<style>
+  html { scroll-behavior: smooth; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #202124;
+    background: #fff;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+    font-size: 10.5pt;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    border-bottom: 3px solid #00a3e0;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .doc-header h1 {
+    color: #0077a8;
+    font-size: 20pt;
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+  .doc-header p { margin: 0; color: #5f6368; font-size: 9.5pt; }
+
+  /* ── HEADINGS ── */
+  h2 {
+    color: #0077a8;
+    font-size: 14pt;
+    margin: 36px 0 8px;
+    border-bottom: 1px solid #dadce0;
+    padding-bottom: 6px;
+    scroll-margin-top: 56px;
+  }
+  h3 { color: #202124; font-size: 11.5pt; margin: 22px 0 6px; scroll-margin-top: 56px; }
+
+  /* ── PHASE BOXES ── */
+  .phase-box {
+    background: #f8f9fa;
+    border-left: 5px solid #00a3e0;
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 0 8px 8px 0;
+    scroll-margin-top: 56px;
+  }
+  .phase-box.warn  { border-left-color: #f29900; background: #fef9e7; }
+  .phase-box.green { border-left-color: #1e8e3e; background: #f0faf4; }
+  .phase-box.red   { border-left-color: #d93025; background: #fce8e6; }
+  .phase-box.purple{ border-left-color: #9333ea; background: #fbf7ff; }
+
+  .phase-title {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #0077a8;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+  .phase-box.warn   .phase-title { color: #f29900; }
+  .phase-box.green  .phase-title { color: #1e8e3e; }
+  .phase-box.red    .phase-title { color: #d93025; }
+  .phase-box.purple .phase-title { color: #9333ea; }
+
+  .trigger {
+    background: #e1f5fe;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #0277bd;
+    margin: 8px 0 12px;
+    display: block;
+    font-size: 9.5pt;
+  }
+  .phase-box.warn   .trigger { background: #fef3cd; color: #7c4d00; }
+  .phase-box.red    .trigger { background: #fce8e6; color: #a50e0e; }
+  .phase-box.purple .trigger { background: #f3e8ff; color: #6b21a8; }
+
+  /* ── NAV BUTTONS ── */
+  .nav-btn {
+    display: inline-block;
+    background: #0077a8;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 9pt;
+    margin: 3px 3px 3px 0;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: #005a80; }
+  .nav-btn.green { background: #1e8e3e; }
+  .nav-btn.green:hover { background: #166130; }
+  .nav-btn.orange { background: #f29900; color: #fff !important; }
+  .nav-btn.orange:hover { background: #c47d00; }
+  .nav-btn.purple { background: #9333ea; }
+  .nav-btn.purple:hover { background: #7e22ce; }
+
+  .back-btn {
+    display: inline-block;
+    background: #f1f3f4;
+    color: #0077a8 !important;
+    border: 1px solid #dadce0;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 8.5pt;
+    margin: 4px 3px 14px 0;
+  }
+  .back-btn:hover { background: #e8eaed; }
+
+  .jump-link { color: #0077a8; font-weight: 600; text-decoration: underline; }
+
+  /* ── QUOTE BOX ── */
+  .quote-box {
+    background: #eef9fd;
+    border-left: 4px solid #00a3e0;
+    padding: 10px 14px;
+    font-style: italic;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 9.5pt;
+  }
+  .quote-box.green { background: #f0faf4; border-left-color: #1e8e3e; }
+
+  /* ── CODE BLOCKS ── */
+  pre, code { font-family: "Consolas", "Courier New", monospace; }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    margin: 10px 0 16px;
+  }
+  code {
+    background: #f1f3f4;
+    color: #c5221f;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9pt;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 9.5pt; }
+  th, td { border: 1px solid #dadce0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f8f9fa; font-weight: 600; color: #202124; }
+  tr:nth-child(even) td { background: #fcfcfc; }
+  .table-csharp { color: #1557b0; font-weight: 600; }
+  .table-java { color: #d93025; font-weight: 600; }
+
+  ul, ol { margin: 6px 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+
+  /* ── FLOATING NAV ── */
+  .floating-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff; border-bottom: 2px solid #00a3e0;
+    padding: 8px 0; margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; gap: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header" id="top">
+  <div style="float: right; margin-top: 4px;">
+    <a href="ORCA.html" class="nav-btn green">▶ Open ORCA Simulator</a>
+    <a href="index.html" class="nav-btn">← Mission Launcher</a>
+  </div>
+  <h1>SPA ORCA Technical Screen &amp; Whiteboard Cheatsheet</h1>
+  <p><strong>Candidate:</strong> Aidan McDowell &nbsp;|&nbsp; <strong>Target:</strong> Systems Planning and Analysis, Inc. (SPA) — SLA Division / ORCA Group &nbsp;|&nbsp; <strong>Classification:</strong> UNCLASSIFIED</p>
+</div>
+
+<!-- FLOATING NAV BAR -->
+<div class="floating-nav">
+  <a href="#strategy" class="nav-btn">1. Strategy &amp; Dynamics</a>
+  <a href="#csharp-java" class="nav-btn orange">2. C# → Java Translation</a>
+  <a href="#framework" class="nav-btn purple">3. 5-Step Execution Framework</a>
+  <a href="#archetypes" class="nav-btn green">4. 3 Problem Archetypes</a>
+  <a href="#phrases" class="nav-btn">5. Verbatim Speaking Scripts</a>
+  <a href="#domain" class="nav-btn">6. Defense Domain Primer</a>
+  <a href="ORCA.html" class="nav-btn" style="background: #202124;">💻 Test in ORCA Console</a>
+</div>
+
+<!-- SECTION 1 -->
+<h2 id="strategy">1. Strategy for Hiring Team (Engineering Leads &amp; OR Analysts)</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<div class="phase-box">
+  <div class="phase-title">Who You Are Talking To &amp; What They Value</div>
+  <span class="trigger">The ORCA group at SPA does not build generic web apps — they build defense simulation engines that Pentagons brief on.</span>
+  <p>Your interviewers will consist of <strong>Senior Software Engineers, Modeling &amp; Simulation Developers, and Operations Research Analysts</strong>. Their priorities are fundamentally different from Big Tech:</p>
+  <ul>
+    <li><strong>Software Serving Analysis:</strong> Frame your code as an enabler for decision-makers. OR analysts run Monte Carlo campaigns with 10,000 runs — if your simulation loop is non-deterministic or leaks memory, the entire fleet acquisition brief fails.</li>
+    <li><strong>Data Integrity &gt; Clever Hacks:</strong> Prefer clean, readable, defensively validated OOP classes over obscure one-line functional tricks.</li>
+    <li><strong>Onsite &amp; Clearance Readiness:</strong> Reaffirm comfort with daily onsite collaboration in San Diego. Classified wargames and ITAR-restricted radar data cannot leave SCIFs.</li>
+    <li><strong>Language Strategy:</strong> <strong>Use Java or C#. Avoid C++ on the whiteboard.</strong> The team develops primarily in Java and C#. Both have identical garbage collection, reference semantics, and standard collections. Avoid C++ pointer syntax and manual memory allocation under whiteboard pressure.</li>
+  </ul>
+</div>
+
+<!-- SECTION 2 -->
+<h2 id="csharp-java">2. C# to Java Translation Cheatsheet (Your Rapid Reference)</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<p>You have strong C# intuition. Java is 90% identical, but small syntax differences will trip you up on a whiteboard. Use this exact comparison table:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Concept</th>
+      <th class="table-csharp">C# (Your Comfort Zone)</th>
+      <th class="table-java">Java (Target Language)</th>
+      <th>Whiteboard Note</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Inheritance / Interface</strong></td>
+      <td><code>class A : Base, IFoo</code></td>
+      <td><code>class A extends Base implements Foo</code></td>
+      <td>Use <code>extends</code> for class, <code>implements</code> for interface</td>
+    </tr>
+    <tr>
+      <td><strong>Print to Console</strong></td>
+      <td><code>Console.WriteLine(x);</code></td>
+      <td><code>System.out.println(x);</code></td>
+      <td>Never write Console.WriteLine in Java</td>
+    </tr>
+    <tr>
+      <td><strong>Dynamic List</strong></td>
+      <td><code>List&lt;T&gt; list = new();</code></td>
+      <td><code>List&lt;T&gt; list = new ArrayList&lt;&gt;();</code></td>
+      <td>Interface on left, concrete type on right</td>
+    </tr>
+    <tr>
+      <td><strong>List Size</strong></td>
+      <td><code>list.Count</code></td>
+      <td><code>list.size()</code></td>
+      <td>Method call in Java (with parentheses)</td>
+    </tr>
+    <tr>
+      <td><strong>Dictionary / Map</strong></td>
+      <td><code>Dictionary&lt;K,V&gt; map = new();</code></td>
+      <td><code>Map&lt;K,V&gt; map = new HashMap&lt;&gt;();</code></td>
+      <td>Interface is <code>Map</code>, concrete is <code>HashMap</code></td>
+    </tr>
+    <tr>
+      <td><strong>Map Operations</strong></td>
+      <td><code>map[k] = v;</code><br><code>map.ContainsKey(k);</code></td>
+      <td><code>map.put(k, v);</code><br><code>map.containsKey(k);</code></td>
+      <td>No square bracket indexing on Java Maps!</td>
+    </tr>
+    <tr>
+      <td><strong>Map Get with Default</strong></td>
+      <td><code>map.GetValueOrDefault(k, def)</code></td>
+      <td><code>map.getOrDefault(k, def)</code></td>
+      <td>Exact same O(1) semantics</td>
+    </tr>
+    <tr>
+      <td><strong>String Length &amp; Empty</strong></td>
+      <td><code>s.Length</code><br><code>string.IsNullOrEmpty(s)</code></td>
+      <td><code>s.length()</code><br><code>s == null || s.isEmpty()</code></td>
+      <td>Always check null first before <code>isEmpty()</code></td>
+    </tr>
+    <tr>
+      <td><strong>Base Class Constructor</strong></td>
+      <td><code>base(id, speed)</code></td>
+      <td><code>super(id, speed);</code></td>
+      <td><code>super(...)</code> must be line 1 of constructor</td>
+    </tr>
+    <tr>
+      <td><strong>Constants</strong></td>
+      <td><code>const int MAX = 100;</code></td>
+      <td><code>final int MAX = 100;</code></td>
+      <td>Use <code>final</code> in Java</td>
+    </tr>
+    <tr>
+      <td><strong>PriorityQueue (Min-Heap)</strong></td>
+      <td><code>PriorityQueue&lt;T, P&gt;</code> (.NET 6+)</td>
+      <td><code>PriorityQueue&lt;Track&gt; pq = new PriorityQueue&lt;&gt;((a,b) -&gt; Double.compare(a.getTti(), b.getTti()));</code></td>
+      <td>Crucial for threat evaluator problems</td>
+    </tr>
+    <tr>
+      <td><strong>Thread-Safe Map</strong></td>
+      <td><code>ConcurrentDictionary&lt;K,V&gt;</code></td>
+      <td><code>ConcurrentHashMap&lt;K,V&gt;</code></td>
+      <td>For multi-threaded simulation loops</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="phase-box warn">
+  <div class="phase-title">Freeze Recovery Technique</div>
+  <span class="trigger">If you blank on a method name on the whiteboard:</span>
+  <div class="quote-box">
+    "In Java I'll use <code>map.getOrDefault()</code> here — exact same semantics as C#'s <code>GetValueOrDefault()</code>. We want O(1) retrieval without throwing KeyNotFoundException."
+  </div>
+  <p>The interviewers will nod and tell you to proceed. They evaluate your architectural choices and data structures, not memorized syntax.</p>
+</div>
+
+<!-- SECTION 3 -->
+<h2 id="framework">3. The 5-Step Incomplete-Problem Whiteboard Execution Framework</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<p>SPA interviewers typically give you an <strong>incomplete class hierarchy</strong> or a buggy method and ask: <em>"Complete this method so our radar tracker correctly handles this scenario."</em> Follow this exact 5-step framework:</p>
+
+<div class="phase-box">
+  <div class="phase-title">Step 1: Read &amp; Trace Aloud (Don't Write Code Yet!)</div>
+  <p>Spend the first 60 seconds reading the given code aloud:</p>
+  <ul>
+    <li>"I see we have an abstract <code>Track</code> base class with common telemetry fields."</li>
+    <li>"The <code>TrackManager</code> maintains an internal map, and we have an unimplemented <code>ingest(Track track)</code> method."</li>
+    <li>"Let's identify the contract: what arguments arrive, what should be returned, and what side effects are expected."</li>
+  </ul>
+</div>
+
+<div class="phase-box warn">
+  <div class="phase-title">Step 2: Clarify Constraints &amp; Edge Cases</div>
+  <p>Ask 2–3 sharp questions that prove defense modeling maturity:</p>
+  <ul>
+    <li><em>"Can tracks arrive out of order, or with duplicated track IDs?"</em> (Answer: yes, duplicate IDs should overwrite with newest kinematics).</li>
+    <li><em>"What are the valid operational boundaries for latitude and longitude?"</em> (-90 to +90 lat, -180 to +180 lon).</li>
+    <li><em>"What is the expected scale — 10 tracks per second or 50,000 in a batch simulation?"</em> (Influences choosing HashMap vs ConcurrentHashMap).</li>
+  </ul>
+</div>
+
+<div class="phase-box purple">
+  <div class="phase-title">Step 3: Identify the Missing Pattern / Gap</div>
+  <p>Diagnose what's missing in the provided code:</p>
+  <ul>
+    <li><strong>Missing Polymorphism:</strong> Are they using a brittle <code>if (type == "RADAR") else if (type == "SONAR")</code> chain? Say: <em>"This violates the Open/Closed Principle — we should use a Factory/Registry pattern."</em></li>
+    <li><strong>Wrong Data Structure:</strong> Are they sorting an ArrayList every tick? Say: <em>"Sorting an ArrayList is O(n log n) every frame. A <code>PriorityQueue</code> gives us O(log n) insertions and O(1) peek."</em></li>
+    <li><strong>Missing Defensive Guards:</strong> No null checks or coordinate range checks.</li>
+  </ul>
+</div>
+
+<div class="phase-box green">
+  <div class="phase-title">Step 4: Implement Cleanly with Helper Methods</div>
+  <p>Write clean, structured code on the board. Break large logic into readable helpers:</p>
+  <pre><code>// Clean structure
+public void ingest(Track track) {
+    if (!isValid(track)) return; // Guard clause
+    activeTracks.put(track.getTrackId(), track); // Upsert
+}</code></pre>
+</div>
+
+<div class="phase-box">
+  <div class="phase-title">Step 5: Dry-Run Edge Cases with Concrete Values &amp; State Big-O</div>
+  <p>Before saying you're done, trace 3 edge cases on the board:</p>
+  <ol>
+    <li><code>track == null</code> → caught by guard clause, no NullPointerException.</li>
+    <li>Duplicate <code>trackId</code> → <code>activeTracks.put()</code> cleanly overwrites previous record, size stays constant.</li>
+    <li>Out-of-bounds coordinates (e.g. lat = 105.0) → rejected before reaching internal collection.</li>
+    <li><strong>State Time &amp; Space Complexity:</strong> "Ingestion is O(1) amortized lookup/insert for HashMap, O(n) space where n is active track count."</li>
+  </ol>
+</div>
+
+<!-- SECTION 4 -->
+<h2 id="archetypes">4. The 3 SPA Defense Modeling Problem Archetypes</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<h3>Archetype A: PriorityQueue Threat Allocator (Min-Heap by TTI)</h3>
+<p><strong>The Problem:</strong> DDG-79 has 15 hostile contacts. You must allocate weapons to the most urgent threats first (lowest Time to Impact = highest danger).</p>
+
+<pre><code class="language-java">// Java Implementation — Target Interview Code
+import java.util.*;
+
+public class ThreatEvaluator {
+
+    public List&lt;Track&gt; getHighestPriorityThreats(List&lt;Track&gt; tracks, int k) {
+        // 1. Guard against null, empty list, or non-positive k
+        if (tracks == null || tracks.isEmpty() || k &lt;= 0) {
+            return Collections.emptyList();
+        }
+
+        // 2. Min-Heap: smallest TTI comes off first
+        PriorityQueue&lt;Track&gt; pq = new PriorityQueue&lt;&gt;(
+            (a, b) -&gt; Double.compare(a.getTimeToImpact(), b.getTimeToImpact())
+        );
+
+        // 3. Filter: only active, un-neutralized hostiles
+        for (Track t : tracks) {
+            if (t != null && t.isHostile() && !t.isNeutralized()) {
+                pq.offer(t);
+            }
+        }
+
+        // 4. Extract top-K threats
+        List&lt;Track&gt; result = new ArrayList&lt;&gt;();
+        while (!pq.isEmpty() && result.size() &lt; k) {
+            result.add(pq.poll());
+        }
+
+        return result;
+    }
+}</code></pre>
+
+<div class="phase-box green">
+  <div class="phase-title">Analyst Discussion Points for Archetype A</div>
+  <ul>
+    <li><strong>Complexity:</strong> Building the heap takes O(n log n). Extracting k elements takes O(k log n). Total time is O(n log n), space is O(n).</li>
+    <li><strong>Monte Carlo $P_k$ Formula:</strong> If the analyst asks how weapons resolve, state:
+      <code>P_k_total = 1 - (1 - P_k_single)^n</code>, where <code>n</code> is rounds fired. For SM-6 ($P_k = 0.84$), a 2-shot salvo yields $1 - (0.16)^2 = 97.44\%$.
+    </li>
+  </ul>
+</div>
+
+<h3>Archetype B: Track Ingestion &amp; Boundary Filter (Upsert &amp; Validation)</h3>
+<p><strong>The Problem:</strong> Write <code>ingest(Track track)</code> to validate incoming radar tracks against geographic boundaries and store them in the active map.</p>
+
+<pre><code class="language-java">// Java Implementation
+public class TrackManager {
+    private final Map&lt;String, Track&gt; activeTracks = new HashMap&lt;&gt;();
+
+    public void ingest(Track track) {
+        // 1. Null check guard
+        if (track == null) return;
+
+        // 2. Empty ID guard
+        if (track.getTrackId() == null || track.getTrackId().trim().isEmpty()) return;
+
+        // 3. Boundary validation
+        double lat = track.getLat();
+        double lon = track.getLon();
+        if (lat &lt; -90.0 || lat &gt; 90.0 || lon &lt; -180.0 || lon &gt; 180.0) return;
+
+        // 4 & 5. Upsert: overwrites existing record if present, inserts if new
+        activeTracks.put(track.getTrackId(), track);
+    }
+
+    public Map&lt;String, Track&gt; getActiveTracks() {
+        return Collections.unmodifiableMap(activeTracks);
+    }
+}</code></pre>
+
+<h3>Archetype C: Extensible Sensor Parser (Factory / Registry Pattern)</h3>
+<p><strong>The Problem:</strong> Replace a fragile <code>if/else-if</code> parser with an extensible design that adheres to the Open/Closed Principle.</p>
+
+<pre><code class="language-java">// Java Implementation
+public interface SensorParser {
+    Track parseRecord(byte[] payload);
+}
+
+public class SensorIngestionService {
+    // Registry of parsers by sensor type
+    private final Map&lt;SensorType, SensorParser&gt; parsers = new HashMap&lt;&gt;();
+    private final Map&lt;String, Track&gt; activeTracks = new ConcurrentHashMap&lt;&gt;();
+
+    public void registerParser(SensorType type, SensorParser parser) {
+        if (type != null && parser != null) {
+            parsers.put(type, parser);
+        }
+    }
+
+    public void ingest(SensorType type, byte[] payload) {
+        SensorParser parser = parsers.get(type);
+        if (parser == null) {
+            throw new IllegalArgumentException("No parser registered for: " + type);
+        }
+
+        Track track = parser.parseRecord(payload);
+        if (track != null && track.isValid()) {
+            activeTracks.put(track.getTrackId(), track);
+        }
+    }
+}</code></pre>
+
+<!-- SECTION 5 -->
+<h2 id="phrases">5. Verbatim Speaking Scripts for the Room</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<div class="phase-box">
+  <div class="phase-title">Scripts for Key Moments</div>
+  <table style="width: 100%;">
+    <tr>
+      <th style="width: 30%;">Scenario</th>
+      <th>What to Say Verbatim</th>
+    </tr>
+    <tr>
+      <td><strong>Selecting Data Structure</strong></td>
+      <td><em>"I'm choosing a <code>PriorityQueue</code> with a min-heap comparator here because we need O(log n) insertions as radar sweeps detect new contacts, and O(1) retrieval of the earliest impact threat."</em></td>
+    </tr>
+    <tr>
+      <td><strong>Refactoring if/else Chain</strong></td>
+      <td><em>"This hardcoded if/else violates the Open/Closed Principle. When the Navy adds the SPY-6 radar next year, we shouldn't have to modify this battle-tested class. A Registry pattern lets us register new parsers without touching core ingestion."</em></td>
+    </tr>
+    <tr>
+      <td><strong>Addressing Simulation Threading</strong></td>
+      <td><em>"In a live simulation loop where radar ticks run on an asynchronous worker and the UI renders on the main thread, I'd swap the <code>HashMap</code> for a <code>ConcurrentHashMap</code> to avoid ConcurrentModificationException."</em></td>
+    </tr>
+    <tr>
+      <td><strong>Finishing Code on Board</strong></td>
+      <td><em>"The implementation is complete. Before stepping back, let me walk through 3 test cases: null payload, duplicate track ID, and coordinate boundary limits."</em></td>
+    </tr>
+  </table>
+</div>
+
+<!-- SECTION 6 -->
+<h2 id="domain">6. Defense Domain Primer for Software Engineers</h2>
+<a href="#top" class="back-btn">↑ Back to Top</a>
+
+<div class="phase-box">
+  <div class="phase-title">Terminology OR Analysts Use Every Day</div>
+  <ul>
+    <li><strong>C5ISR:</strong> Command, Control, Communications, Computers, Cyber, Intelligence, Surveillance, and Reconnaissance. The software layer connecting radars to missiles.</li>
+    <li><strong>AN/SPY-6 (AMDR):</strong> Air and Missile Defense Radar installed on Flight III Arleigh Burke destroyers (DDG-79 class). High sensitivity S-band radar capable of tracking ballistic and hypersonic targets simultaneously.</li>
+    <li><strong>ASCM vs HGV:</strong> ASCM (Anti-Ship Cruise Missile, Mach 0.8–2.5, sea-skimming). HGV (Hypersonic Glide Vehicle, Mach 5+, high altitude, erratic atmospheric maneuvers requiring immediate weapon allocation).</li>
+    <li><strong>Magazine Economy:</strong> You cannot fire an SM-6 ($4.3M) at every $20,000 drone. Defense models simulate multi-layer weapons: electronic jamming (EW) → close-in ESSM / RAM → kinetic SM-6.</li>
+  </ul>
+</div>
+
+<div style="text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid #dadce0;">
+  <a href="ORCA.html" class="nav-btn green" style="font-size: 11pt; padding: 8px 18px;">▶ Open ORCA Interactive Console</a>
+  <a href="rocketlab.html" class="nav-btn" style="font-size: 11pt; padding: 8px 18px;">🚀 Open Rocket Lab Simulator</a>
+  <a href="index.html" class="nav-btn" style="font-size: 11pt; padding: 8px 18px;">← Mission Launcher Hub</a>
+</div>
+
+</body>
+</html>

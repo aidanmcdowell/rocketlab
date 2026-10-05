@@ -22,11 +22,15 @@
     </div>
 
     <div class="orca-divider"></div>
-    <div class="orca-classif">UNCLASSIFIED // M&S DEMO</div>
+    <div class="orca-classif">UNCLASSIFIED // M&amp;S DEMO</div>
 
     <div class="orca-divider"></div>
-    <div style="font-size:10px;color:var(--text-secondary);letter-spacing:0.5px;">
-      TACTICAL C5ISR &amp; WARFIGHTING SIMULATION CONSOLE
+
+    <!-- VIEW MODE SWITCHER -->
+    <div class="view-mode-group" title="Switch layout focus">
+      <button class="view-mode-btn active" id="btnViewRadar" onclick="setViewMode('default')">🎯 RADAR FOCUS</button>
+      <button class="view-mode-btn" id="btnViewSplit" onclick="setViewMode('split')">⚖️ SPLIT VIEW (50/50)</button>
+      <button class="view-mode-btn" id="btnViewCode" onclick="setViewMode('code')">💻 CODE LAB FOCUS</button>
     </div>
 
     <div class="orca-time-group">
@@ -39,9 +43,27 @@
         <button class="sim-speed-btn" data-speed="5">5×</button>
       </div>
 
+      <button class="hdr-guide-btn" onclick="openGuideModal()">❓ HOW TO USE</button>
+      <button class="hdr-cheatsheet-btn" onclick="openCheatsheet()">📋 CHEATSHEET</button>
+      <a href="ORCA_cheatsheet.html" target="_blank" class="hdr-nav-btn" style="text-decoration:none;" title="Open comprehensive cheatsheet in full tab">📖 FULL CHEATSHEET ↗</a>
       <button class="hdr-nav-btn" onclick="window.location.href='index.html'">← LAUNCHER</button>
-      <button class="hdr-nav-btn" onclick="openCheatsheet()">📋 CHEATSHEET</button>
     </div>
+  </div>
+
+  <!-- ── QUICK START GUIDE BANNER ── -->
+  <div class="orca-guide-banner" id="orcaGuideBanner">
+    <span class="guide-banner-badge">QUICK START</span>
+    <div class="guide-banner-steps">
+      <span class="guide-banner-step"><strong>1. Observe Radar:</strong> Watch live tracks &amp; threat queue</span>
+      <span class="guide-banner-sep">→</span>
+      <span class="guide-banner-step"><strong>2. Select Problem:</strong> Pick an OOP incomplete problem below</span>
+      <span class="guide-banner-sep">→</span>
+      <span class="guide-banner-step"><strong>3. Check Cheatsheet:</strong> Click purple "CHEATSHEET" for Java/C# patterns</span>
+      <span class="guide-banner-sep">→</span>
+      <span class="guide-banner-step"><strong>4. Code &amp; Test:</strong> Write logic in editor and click "RUN TESTS"</span>
+    </div>
+    <span class="guide-banner-action" onclick="openGuideModal()">[ View Full Instructions ]</span>
+    <button class="guide-banner-close" onclick="document.getElementById('orcaGuideBanner').style.display='none'" title="Dismiss banner">✕</button>
   </div>
 
   <!-- ── LEFT: TRACK LIST & SENSOR FEED ── -->
@@ -178,39 +200,181 @@
     </div>
 
     <!-- OOP Whiteboard Code Lab -->
-    <div class="whiteboard-dock">
+    <div class="whiteboard-dock" id="wbDock">
       <div class="wb-header">
-        <div class="wb-title">🖊 OOP Code Lab</div>
+        <div class="wb-title">
+          <span>🖊</span> OOP CODE LAB
+        </div>
 
-        <select class="wb-problem-select" id="wbProblemSelect">
-          <option value="trackIngestion">Track Ingestion &amp; Boundary Filter</option>
-          <option value="threatAllocator">PriorityQueue Threat Allocator</option>
-          <option value="sensorParser">Sensor Parser — Factory Pattern</option>
+        <select class="wb-problem-select" id="wbProblemSelect" title="Select whiteboard problem">
+          <option value="trackIngestion">1. Track Ingestion &amp; Boundary Filter</option>
+          <option value="threatAllocator">2. PriorityQueue Threat Allocator</option>
+          <option value="sensorParser">3. Extensible Sensor Parser (Factory)</option>
         </select>
 
         <div class="wb-lang-tabs">
-          <button class="wb-lang-tab active" data-lang="java">Java</button>
-          <button class="wb-lang-tab" data-lang="csharp">C#</button>
-          <button class="wb-lang-tab" data-lang="cpp">C++</button>
+          <button class="wb-lang-tab active" data-lang="java" title="Target language for SPA ORCA">Java</button>
+          <button class="wb-lang-tab" data-lang="csharp" title="Your comfort language">C#</button>
+          <button class="wb-lang-tab" data-lang="cpp" title="C++ reference">C++</button>
         </div>
 
-        <button class="wb-run-btn" id="wbRunBtn">▶ RUN TESTS</button>
-        <button class="wb-run-btn" id="wbSolBtn" style="background:var(--amber-dim);color:var(--amber);border-color:rgba(245,158,11,0.4);margin-left:4px;">💡 SOLUTION</button>
+        <!-- Mode tabs inside the Code Lab -->
+        <div class="wb-subnav">
+          <button class="wb-subnav-btn active" id="btnWbTabEditor" onclick="setWbTab('editor')">💻 Code Editor</button>
+          <button class="wb-subnav-btn" id="btnWbTabBriefing" onclick="setWbTab('briefing')">🎯 Requirements</button>
+          <button class="wb-subnav-btn" id="btnWbTabCheatsheet" onclick="setWbTab('cheatsheet')">📋 In-Line Cheatsheet</button>
+        </div>
+
+        <!-- Right controls -->
+        <div class="wb-controls-right">
+          <button class="wb-expand-btn" id="btnWbExpand" onclick="toggleWbExpand()" title="Toggle full-height IDE">
+            <span>⛶</span> <span id="wbExpandLabel">EXPAND IDE</span>
+          </button>
+          <button class="wb-sol-btn" id="wbSolBtn" title="Reveal reference solution">💡 SOLUTION</button>
+          <button class="wb-run-btn" id="wbRunBtn" title="Run acceptance test suite">▶ RUN TESTS</button>
+        </div>
       </div>
 
       <div class="wb-body">
-        <div class="wb-editor-wrap">
-          <textarea class="wb-code" id="wbCodeEditor"
-            spellcheck="false"
-            autocorrect="off"
-            autocapitalize="off"
-            autocomplete="off"
-            data-gramm="false"></textarea>
+
+        <!-- VIEW 1: Editor + Test Output -->
+        <div class="wb-editor-view" id="wbViewEditor">
+          <div class="wb-editor-wrap">
+            <div class="wb-briefing-strip">
+              <span class="wb-briefing-badge" id="wbBriefingBadge">PROBLEM 1</span>
+              <span class="wb-briefing-desc" id="wbBriefingDesc">
+                <strong>Goal:</strong> Complete <code>ingest(Track track)</code>. Validate null, ID, lat/lon bounds, and upsert into map.
+              </span>
+              <button class="wb-subnav-btn" onclick="setWbTab('briefing')" style="flex-shrink:0;">View Criteria ↗</button>
+            </div>
+            <textarea class="wb-code" id="wbCodeEditor"
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+              autocomplete="off"
+              data-gramm="false"></textarea>
+          </div>
+
+          <div class="wb-output" id="wbOutput">
+            <div class="wb-output-header">
+              <span>TEST SUITE</span>
+              <span style="color:var(--spa-cyan);">HEURISTIC RUNNER</span>
+            </div>
+            <div class="wb-output-line info">[ CODE LAB ] Ready — write missing logic &amp; click "RUN TESTS".</div>
+          </div>
         </div>
 
-        <div class="wb-output" id="wbOutput">
-          <div class="wb-output-line info">[ CODE LAB ] Ready — select a problem above.</div>
+        <!-- VIEW 2: Problem Briefing & Checklist -->
+        <div class="wb-briefing-tab-view" id="wbViewBriefing">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <div>
+              <div style="font-size:14px; font-weight:700; color:var(--spa-cyan);" id="briefingTitle">Track Ingestion &amp; Boundary Filter</div>
+              <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Operations Research &amp; C5ISR Analysis (ORCA) — Technical Archetype</div>
+            </div>
+            <button class="wb-run-btn" onclick="setWbTab('editor')">← Back to Code Editor</button>
+          </div>
+
+          <div id="briefingBody">
+            <div class="cs-section">
+              <div class="cs-section-title">Objective &amp; Contract</div>
+              <p style="font-size:12px; line-height:1.7; color:var(--text-primary); margin-bottom:12px;" id="briefingObjective">
+                Complete the <code>ingest(Track track)</code> method. Sensor reports arrive continuously from radar antennas. Your method must validate incoming telemetry before it touches the tactical wargaming state.
+              </p>
+            </div>
+
+            <div class="cs-section">
+              <div class="cs-section-title">Acceptance Criteria Checklist (What Interviewers Check)</div>
+              <div class="framework-grid" style="grid-template-columns:1fr 1fr;" id="briefingCriteria">
+                <div class="framework-card">
+                  <div class="fw-title">① Null &amp; Type Guards</div>
+                  <div class="fw-step">Reject <code>null</code> track references immediately.</div>
+                  <div class="fw-step">Reject tracks with <code>null</code> or empty string <code>trackId</code>.</div>
+                </div>
+                <div class="framework-card">
+                  <div class="fw-title">② Operational Boundaries</div>
+                  <div class="fw-step">Latitude must be within <code>[-90.0, +90.0]</code> degrees.</div>
+                  <div class="fw-step">Longitude must be within <code>[-180.0, +180.0]</code> degrees.</div>
+                </div>
+                <div class="framework-card">
+                  <div class="fw-title">③ Upsert Storage Semantics</div>
+                  <div class="fw-step">If <code>trackId</code> exists, overwrite previous telemetry (update).</div>
+                  <div class="fw-step">If <code>trackId</code> is new, insert into collection (create).</div>
+                </div>
+                <div class="framework-card">
+                  <div class="fw-title">④ Whiteboard Speaking Point</div>
+                  <div class="fw-step">"I use a <code>HashMap</code> for O(1) ingestion lookup. In a live multi-threaded simulation loop, I'd use <code>ConcurrentHashMap</code>."</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- VIEW 3: In-Line Cheatsheet (C# → Java Syntax Table) -->
+        <div class="wb-cheatsheet-tab-view" id="wbViewCheatsheet">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <div>
+              <div style="font-size:14px; font-weight:700; color:#d8b4fe;">C# → Java Transition Cheatsheet</div>
+              <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Quick syntax reference while coding — no tab switching needed</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <a href="ORCA_cheatsheet.html" target="_blank" class="wb-sol-btn" style="text-decoration:none; padding:4px 10px;">Open Full Page ↗</a>
+              <button class="wb-run-btn" onclick="setWbTab('editor')">← Return to Code</button>
+            </div>
+          </div>
+
+          <table class="cs-table">
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>C# (Your Natural Instinct)</th>
+                <th class="java-col">Java (Interview Target)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="concept">Map / Dictionary Lookup</td>
+                <td><code>map[key] = val;</code><br><code>map.ContainsKey(key)</code></td>
+                <td class="java-col"><code>map.put(key, val);</code><br><code>map.containsKey(key)</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Map Safe Get</td>
+                <td><code>map.GetValueOrDefault(k, def)</code></td>
+                <td class="java-col"><code>map.getOrDefault(k, def)</code></td>
+              </tr>
+              <tr>
+                <td class="concept">List Size</td>
+                <td><code>list.Count</code></td>
+                <td class="java-col"><code>list.size()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">String Checks</td>
+                <td><code>string.IsNullOrEmpty(s)</code></td>
+                <td class="java-col"><code>s == null || s.isEmpty()</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Inheritance</td>
+                <td><code>class Radar : Sensor, ITrackable</code></td>
+                <td class="java-col"><code>class Radar extends Sensor implements Trackable</code></td>
+              </tr>
+              <tr>
+                <td class="concept">PriorityQueue</td>
+                <td><code>PriorityQueue&lt;T,P&gt;</code> (.NET 6+)</td>
+                <td class="java-col"><code>new PriorityQueue&lt;&gt;((a,b) -&gt; Double.compare(a.getTti(), b.getTti()));</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Console Print</td>
+                <td><code>Console.WriteLine(...)</code></td>
+                <td class="java-col"><code>System.out.println(...)</code></td>
+              </tr>
+              <tr>
+                <td class="concept">Constants</td>
+                <td><code>const int MAX = 100;</code></td>
+                <td class="java-col"><code>final int MAX = 100;</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
 
@@ -527,6 +691,94 @@
   </div><!-- /modal-box -->
 </div><!-- /cheatsheet modal -->
 
+
+<!-- ================================================================
+     INTERACTIVE WALKTHROUGH GUIDE MODAL
+================================================================ -->
+<div class="modal-overlay" id="orcaGuideModal">
+  <div class="modal-box" style="width:min(860px, 95vw);">
+    <div class="modal-header">
+      <div class="modal-title">🎯 How to Use the SPA ORCA Simulator — Complete Guide</div>
+      <button class="modal-close" onclick="closeGuideModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="cs-section">
+        <div class="cs-section-title">What is SPA ORCA &amp; What Are They Testing?</div>
+        <p style="font-size:12px; line-height:1.7; color:var(--text-primary); margin-bottom:10px;">
+          Systems Planning and Analysis (SPA) — Operations Research &amp; C5ISR Analysis (ORCA) group builds defense modeling software for the U.S. Navy and Pentagon. In this interview, they test two distinct skill sets:
+        </p>
+        <div class="framework-grid" style="grid-template-columns:1fr 1fr; margin-bottom:16px;">
+          <div class="framework-card">
+            <div class="fw-title">1. Domain &amp; Simulation Thinking</div>
+            <div class="fw-step">Understanding radar sweeps, sensor feeds (radar, sonar, ESM), track kinematics, and priority queue ordering.</div>
+            <div class="fw-step">Understanding missile economy: why firing high-end interceptors at cheap drones drains magazines ($P_k$ Monte Carlo).</div>
+          </div>
+          <div class="framework-card">
+            <div class="fw-title">2. Whiteboard OOP Architecture</div>
+            <div class="fw-step">Handling incomplete code problems: defensive validation, null guards, boundary filters.</div>
+            <div class="fw-step">Choosing correct collections: <code>PriorityQueue</code> for min-heap threat sorting, <code>Map</code> for O(1) ingestion, Factory pattern for Open/Closed sensors.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cs-section">
+        <div class="cs-section-title">Recommended 4-Step Practice Routine</div>
+        <div class="framework-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <div class="framework-card">
+            <div class="fw-title">Step 1: Radar</div>
+            <div class="fw-step">Switch scenarios in bottom-left dock.</div>
+            <div class="fw-step">Click red contacts on radar to inspect bearing, altitude, speed.</div>
+            <div class="fw-step">Click "⚡ INTERCEPT SM-6" to watch Monte Carlo resolution.</div>
+          </div>
+          <div class="framework-card">
+            <div class="fw-title">Step 2: Choose Problem</div>
+            <div class="fw-step">In bottom-right Code Lab, pick Problem 1, 2, or 3.</div>
+            <div class="fw-step">Select your language (<strong>Java recommended</strong> or C#).</div>
+            <div class="fw-step">Click "🎯 Requirements" to review acceptance checklist.</div>
+          </div>
+          <div class="framework-card">
+            <div class="fw-title">Step 3: Cheatsheet</div>
+            <div class="fw-step">Click purple "📋 CHEATSHEET" or "In-Line Cheatsheet" tab.</div>
+            <div class="fw-step">Review C# → Java translation table for <code>Map</code> vs <code>Dictionary</code> and <code>PriorityQueue</code>.</div>
+            <div class="fw-step">Memorize the 5-step framework.</div>
+          </div>
+          <div class="framework-card">
+            <div class="fw-title">Step 4: Solve &amp; Run</div>
+            <div class="fw-step">Click "⛶ EXPAND IDE" for full-screen coding comfort.</div>
+            <div class="fw-step">Write your code in the editor.</div>
+            <div class="fw-step">Click "▶ RUN TESTS" to run the test suite, or "💡 SOLUTION" to study.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cs-section">
+        <div class="cs-section-title">Layout &amp; View Modes</div>
+        <p style="font-size:12px; line-height:1.7; color:var(--text-secondary); margin-bottom:10px;">
+          Use the mode buttons at the top of the screen to tailor your view:
+        </p>
+        <ul>
+          <li><strong>🎯 RADAR FOCUS:</strong> Full tactical radar view for observing contacts and simulating scenarios.</li>
+          <li><strong>⚖️ SPLIT VIEW (50/50):</strong> Balanced view with half-screen radar and half-screen Code Lab.</li>
+          <li><strong>💻 CODE LAB FOCUS:</strong> Compacts radar into a top bar and gives 75%+ of the screen to the IDE.</li>
+          <li><strong>⛶ EXPAND IDE:</strong> Click the expand button in the Code Lab header for full distraction-free fullscreen code editing.</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin-top: 14px;">
+        <button class="wb-run-btn" style="font-size: 11px; padding: 7px 22px; display: inline-block;" onclick="closeGuideModal()">Got It — Let's Practice!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- FLOATING CHEATSHEET TAB (Always accessible on right edge) -->
+<div class="floating-cs-badge" onclick="openCheatsheet()" title="Open SPA ORCA Interview Cheatsheet">
+  📋 CHEATSHEET
+</div>
+
+
 <script>
   // Modal controls
   function openCheatsheet() {
@@ -544,16 +796,97 @@
   document.getElementById('cheatsheetModal').addEventListener('click', function(e) {
     if (e.target === this) closeCheatsheet();
   });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeCheatsheet();
+
+  // Guide modal
+  function openGuideModal() {
+    document.getElementById('orcaGuideModal').classList.add('open');
+  }
+  function closeGuideModal() {
+    document.getElementById('orcaGuideModal').classList.remove('open');
+  }
+  document.getElementById('orcaGuideModal').addEventListener('click', function(e) {
+    if (e.target === this) closeGuideModal();
   });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeCheatsheet();
+      closeGuideModal();
+      const wb = document.getElementById('wbDock');
+      if (wb && wb.classList.contains('maximized')) toggleWbExpand();
+    }
+  });
+
+  // View Mode Switcher
+  function setViewMode(mode) {
+    const screen = document.getElementById('screen-orca');
+    if (!screen) return;
+    screen.classList.remove('view-split', 'view-code-focus');
+    document.querySelectorAll('.view-mode-btn').forEach(b => b.classList.remove('active'));
+
+    if (mode === 'split') {
+      screen.classList.add('view-split');
+      const b = document.getElementById('btnViewSplit');
+      if (b) b.classList.add('active');
+    } else if (mode === 'code') {
+      screen.classList.add('view-code-focus');
+      const b = document.getElementById('btnViewCode');
+      if (b) b.classList.add('active');
+    } else {
+      const b = document.getElementById('btnViewRadar');
+      if (b) b.classList.add('active');
+    }
+
+    // Trigger canvas resize
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  // Toggle Whiteboard Expand
+  function toggleWbExpand() {
+    const wb = document.getElementById('wbDock');
+    const label = document.getElementById('wbExpandLabel');
+    const btn = document.getElementById('btnWbExpand');
+    if (!wb) return;
+    const isMax = wb.classList.toggle('maximized');
+    if (btn) btn.classList.toggle('active', isMax);
+    if (label) label.textContent = isMax ? 'COLLAPSE' : 'EXPAND IDE';
+  }
+
+  // Code Lab Subnav Tabs (Editor vs Briefing vs Cheatsheet)
+  function setWbTab(tab) {
+    const editorView = document.getElementById('wbViewEditor');
+    const briefView  = document.getElementById('wbViewBriefing');
+    const cheatView  = document.getElementById('wbViewCheatsheet');
+
+    const btnEditor = document.getElementById('btnWbTabEditor');
+    const btnBrief  = document.getElementById('btnWbTabBriefing');
+    const btnCheat  = document.getElementById('btnWbTabCheatsheet');
+
+    [editorView, briefView, cheatView].forEach(v => { if (v) v.style.display = 'none'; v.classList.remove('active'); });
+    [btnEditor, btnBrief, btnCheat].forEach(b => { if (b) b.classList.remove('active'); });
+
+    if (tab === 'briefing') {
+      if (briefView) { briefView.style.display = 'block'; briefView.classList.add('active'); }
+      if (btnBrief) btnBrief.classList.add('active');
+    } else if (tab === 'cheatsheet') {
+      if (cheatView) { cheatView.style.display = 'block'; cheatView.classList.add('active'); }
+      if (btnCheat) btnCheat.classList.add('active');
+    } else {
+      if (editorView) { editorView.style.display = 'flex'; editorView.classList.add('active'); }
+      if (btnEditor) btnEditor.classList.add('active');
+    }
+  }
 </script>
 
 <script src="orca-scenarios.js"></script>
 <script src="orca-whiteboard.js"></script>
 <script src="orca-engine.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', initORCA);
+  document.addEventListener('DOMContentLoaded', () => {
+    initORCA();
+    // Default to split view so the code lab is immediately spacious and usable
+    setViewMode('split');
+  });
 </script>
 
 </body>

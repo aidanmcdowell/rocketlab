@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rocket Lab — Ground Software Interview Simulator</title>
+<meta name="description" content="Practice 30-minute technical coding interviews for Rocket Lab Ground Software Engineer roles. Real aerospace scenarios with Pyodide-powered Python execution.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- PYODIDE LOADING OVERLAY -->
+<div id="pyodideOverlay" class="pyodide-overlay" style="display:none;">
+  <div class="pyodide-loader">
+    <div class="pyodide-spinner"></div>
+    <div class="pyodide-load-text">Initializing Python Runtime…</div>
+    <div class="pyodide-load-sub" id="pyodideStatus">Loading Pyodide from CDN</div>
+  </div>
+</div>
+
+<!-- LANDING SCREEN -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-bg">
+    <div class="star-field" id="starField"></div>
+    <div class="grid-overlay"></div>
+  </div>
+  <div class="landing-content">
+    <div class="rocketlab-logo">
+      <div class="logo-icon">🚀</div>
+      <div class="logo-text">
+        <span class="logo-company">ROCKET LAB</span>
+        <span class="logo-subtitle">Ground Software Division</span>
+      </div>
+    </div>
+    <h1 class="landing-title">Technical Interview<br><span class="accent-text">Simulator</span></h1>
+    <p class="landing-desc">30-minute live coding simulation with Anh Thai — Ground Software Engineer. Real aerospace scenarios. In-browser Python execution via Pyodide. Real-time rubric scoring.</p>
+
+    <div class="scenario-grid" id="scenarioGrid"></div>
+
+    <div class="landing-controls">
+      <button class="btn-random" id="btnRandom" onclick="selectRandom()">
+        <span class="btn-icon">🎲</span> Random Scenario
+      </button>
+      <button class="btn-random" style="background: rgba(11,87,208,0.25); border-color: rgba(11,87,208,0.5);" onclick="window.location.href='RLCS.html'">
+        <span class="btn-icon">📋</span> Rocket Lab Cheatsheet
+      </button>
+      <button class="btn-random" style="background: rgba(0,163,224,0.2); border-color: rgba(0,163,224,0.4);" onclick="window.location.href='index.html'">
+        <span class="btn-icon">←</span> Hub Launcher
+      </button>
+    </div>
+
+    <div class="candidate-setup">
+      <div class="setup-field">
+        <label>Your Name</label>
+        <input type="text" id="candidateName" placeholder="Enter your name" value="Aidan" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INTERVIEW SCREEN -->
+<div id="screen-interview" class="screen">
+  <!-- Top HUD -->
+  <div class="hud-bar">
+    <div class="hud-left">
+      <div class="rl-badge">
+        <span class="badge-icon">🚀</span>
+        <div>
+          <div class="badge-title">ROCKET LAB</div>
+          <div class="badge-sub">Technical Interview</div>
+        </div>
+      </div>
+      <div class="scenario-badge" id="hudScenarioBadge"></div>
+    </div>
+
+    <div class="hud-center">
+      <div class="phase-label" id="phaseLabel">Phase 0: Introduction</div>
+      <div class="timer-display" id="timerDisplay">30:00</div>
+      <div class="phase-bar-container">
+        <div class="phase-bar" id="phaseBar"></div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="status-indicators">
+        <div class="status-item status-ok" id="statusSystem">SYSTEM OK</div>
+        <div class="status-item" id="statusPyodide">PYODIDE ⏳</div>
+        <div class="status-item" id="statusPhase">PHASE 0/4</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="interview-layout">
+    <!-- LEFT: Chat Panel -->
+    <div class="panel panel-chat">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="marcus-avatar">A</div>
+          <div>
+            <div class="panel-name" id="interviewerName">Anh Thai</div>
+            <div class="panel-role" id="interviewerRole">Ground Software Engineer · Rocket Lab</div>
+          </div>
+        </div>
+        <div class="online-dot"></div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Messages injected by JS -->
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chatInput" placeholder="Type your response or question..." rows="3"
+          autocorrect="off" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
+        <div class="chat-controls">
+          <button class="btn-hint" id="btnHint" onclick="requestHint()">💡 Hint</button>
+          <button class="btn-send" id="btnSend" onclick="sendMessage()">Send →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Code Editor + Terminal -->
+    <div class="panel-right">
+      <!-- PROMPT PANEL -->
+      <div class="panel panel-prompt" id="panelPrompt">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📋</span>
+            <div class="panel-name">Problem Prompt</div>
+          </div>
+          <button class="btn-collapse" onclick="togglePrompt()">▼</button>
+        </div>
+        <div class="prompt-body" id="promptBody">
+          <pre id="promptText"></pre>
+        </div>
+      </div>
+
+      <div class="panel panel-editor" id="panelEditor">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="editor-icon">📝</span>
+            <div class="panel-name">Code Editor — <span id="editorFilename">solution.py</span></div>
+          </div>
+          <div class="editor-controls">
+            <button class="btn-run" id="btnRun" onclick="runTests()">▶ Run Tests</button>
+            <button class="btn-copy" onclick="copyCode()">⧉ Copy</button>
+          </div>
+        </div>
+        <div class="editor-wrapper">
+          <div class="line-numbers" id="lineNumbers">1</div>
+          <textarea class="code-editor" id="codeEditor"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            autocomplete="off"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"></textarea>
+        </div>
+      </div>
+
+      <div class="panel panel-terminal" id="panelTerminal">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>⚙</span>
+            <div class="panel-name">Test Execution Output <span class="pyodide-badge" id="pyodideBadge">Pyodide</span></div>
+          </div>
+          <button class="btn-clear" onclick="clearTerminal()">Clear</button>
+        </div>
+        <div class="terminal-output" id="terminalOutput">
+          <div class="term-line term-sys">[ SYSTEM ] Sandbox ready. Click "Run Tests" to validate.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCORECARD SCREEN -->
+<div id="screen-scorecard" class="screen">
+  <div class="landing-bg">
+    <div class="grid-overlay"></div>
+  </div>
+  <div class="scorecard-content">
+    <div class="scorecard-header">
+      <div class="rocketlab-logo">
+        <div class="logo-icon">🚀</div>
+        <div class="logo-text">
+          <span class="logo-company">ROCKET LAB</span>
+          <span class="logo-subtitle">Interview Evaluation Report</span>
+        </div>
+      </div>
+      <div class="scorecard-meta" id="scorecardMeta"></div>
+    </div>
+
+    <div class="scorecard-grid">
+      <div class="score-summary-card">
+        <div class="score-circle-wrap">
+          <svg class="score-ring" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#1a2035" stroke-width="12"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke-width="12"
+              stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"
+              id="scoreRingCircle" style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.5s ease"/>
+          </svg>
+          <div class="score-center">
+            <div class="score-value" id="scoreTotalValue">0</div>
+            <div class="score-label">/ 100</div>
+          </div>
+        </div>
+        <div class="score-verdict" id="scoreVerdict">—</div>
+        <div class="score-tag" id="scoreTag">Evaluating...</div>
+      </div>
+
+      <div class="score-breakdown" id="scoreBreakdown"></div>
+    </div>
+
+    <div class="scorecard-feedback" id="scorecardFeedback"></div>
+    <div class="scorecard-actions">
+      <button class="btn-restart" onclick="restartApp()">↩ Try Another Scenario</button>
+      <button class="btn-review" onclick="reviewSession()">📋 Review Full Session</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+<script src="scenarios.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
