@@ -1,533 +1,1110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>SPA ORCA Technical Screen & Whiteboard Cheatsheet — Aidan McDowell</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPA ORCA — Dev Team Whiteboard Session</title>
+<meta name="description" content="SPA ORCA Dev Team Whiteboard Session simulator for Aidan McDowell. C++ and Java OOP whiteboard problems with scripted interviewer flow and block-by-block narration.">
+<link rel="stylesheet" href="orca-styles.css">
 <style>
-  html { scroll-behavior: smooth; }
-  *, *::before, *::after { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    color: #202124;
-    background: #fff;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 28px 24px 60px;
-    font-size: 10.5pt;
-  }
+/* ──────────────────────────────────────────────
+   WHITEBOARD-SPECIFIC OVERRIDES
+────────────────────────────────────────────── */
 
-  /* ── HEADER ── */
-  .doc-header {
-    border-bottom: 3px solid #00a3e0;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
-  }
-  .doc-header h1 {
-    color: #0077a8;
-    font-size: 20pt;
-    margin: 0 0 6px;
-    letter-spacing: -0.3px;
-  }
-  .doc-header p { margin: 0; color: #5f6368; font-size: 9.5pt; }
+/* Probability badge colors */
+.prob-95  { background: rgba(34,197,94,0.18);  color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+.prob-87  { background: rgba(0,163,224,0.18);  color: #38bdf8; border: 1px solid rgba(0,163,224,0.4); }
+.prob-78  { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+.prob-68  { background: rgba(168,85,247,0.18); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); }
+.prob-52  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.35); }
 
-  /* ── HEADINGS ── */
-  h2 {
-    color: #0077a8;
-    font-size: 14pt;
-    margin: 36px 0 8px;
-    border-bottom: 1px solid #dadce0;
-    padding-bottom: 6px;
-    scroll-margin-top: 56px;
-  }
-  h3 { color: #202124; font-size: 11.5pt; margin: 22px 0 6px; scroll-margin-top: 56px; }
+/* ── LANDING ── */
+.wb-landing { position:relative; z-index:3; width:100%; max-width:900px; margin:0 auto; padding:32px 24px 60px; overflow-y:auto; height:100%; }
+.wb-landing::-webkit-scrollbar { width:4px; }
+.wb-landing::-webkit-scrollbar-thumb { background:var(--border-md); border-radius:2px; }
 
-  /* ── PHASE BOXES ── */
-  .phase-box {
-    background: #f8f9fa;
-    border-left: 5px solid #00a3e0;
-    padding: 14px 18px;
-    margin: 14px 0;
-    border-radius: 0 8px 8px 0;
-    scroll-margin-top: 56px;
-  }
-  .phase-box.warn  { border-left-color: #f29900; background: #fef9e7; }
-  .phase-box.green { border-left-color: #1e8e3e; background: #f0faf4; }
-  .phase-box.red   { border-left-color: #d93025; background: #fce8e6; }
-  .phase-box.purple{ border-left-color: #9333ea; background: #fbf7ff; }
+.wb-header { text-align:center; margin-bottom:36px; }
+.wb-eyebrow { font-family:var(--font-mono); font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); margin-bottom:10px; }
+.wb-title { font-size:36px; font-weight:300; letter-spacing:-0.5px; margin-bottom:8px; }
+.wb-title strong { font-weight:700; color:var(--spa-cyan); }
+.wb-subtitle { font-size:13px; color:var(--text-secondary); line-height:1.8; }
 
-  .phase-title {
-    font-weight: 700;
-    font-size: 10pt;
-    color: #0077a8;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 6px;
-  }
-  .phase-box.warn   .phase-title { color: #f29900; }
-  .phase-box.green  .phase-title { color: #1e8e3e; }
-  .phase-box.red    .phase-title { color: #d93025; }
-  .phase-box.purple .phase-title { color: #9333ea; }
+.prob-grid { display:flex; flex-direction:column; gap:14px; margin-bottom:20px; }
 
-  .trigger {
-    background: #e1f5fe;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-weight: 600;
-    color: #0277bd;
-    margin: 8px 0 12px;
-    display: block;
-    font-size: 9.5pt;
-  }
-  .phase-box.warn   .trigger { background: #fef3cd; color: #7c4d00; }
-  .phase-box.red    .trigger { background: #fce8e6; color: #a50e0e; }
-  .phase-box.purple .trigger { background: #f3e8ff; color: #6b21a8; }
+.prob-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+  padding:20px 22px; cursor:pointer; transition:all 0.3s ease;
+  display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center;
+  position:relative; overflow:hidden;
+}
+.prob-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--spa-cyan); opacity:0; transition:opacity 0.3s;
+}
+.prob-card:hover { border-color:var(--border-hi); transform:translateX(4px); box-shadow:0 0 30px rgba(0,163,224,0.12); }
+.prob-card:hover::before { opacity:1; }
 
-  /* ── NAV BUTTONS ── */
-  .nav-btn {
-    display: inline-block;
-    background: #0077a8;
-    color: #fff !important;
-    font-weight: 600;
-    padding: 5px 11px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 9pt;
-    margin: 3px 3px 3px 0;
-    white-space: nowrap;
-  }
-  .nav-btn:hover { background: #005a80; }
-  .nav-btn.green { background: #1e8e3e; }
-  .nav-btn.green:hover { background: #166130; }
-  .nav-btn.orange { background: #f29900; color: #fff !important; }
-  .nav-btn.orange:hover { background: #c47d00; }
-  .nav-btn.purple { background: #9333ea; }
-  .nav-btn.purple:hover { background: #7e22ce; }
+.prob-card-left {}
+.prob-rank { font-family:var(--font-mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+.prob-name { font-size:16px; font-weight:700; color:var(--text-primary); margin-bottom:6px; }
+.prob-why { font-size:12px; color:var(--text-secondary); line-height:1.6; margin-bottom:10px; }
+.prob-tags { display:flex; flex-wrap:wrap; gap:5px; }
+.prob-tag { font-family:var(--font-mono); font-size:9px; padding:2px 7px; border-radius:3px; border:1px solid var(--border); color:var(--text-dim); background:rgba(255,255,255,0.02); }
+.prob-tag.cpp  { color:#7dd3fc; border-color:rgba(125,211,252,0.25); }
+.prob-tag.java { color:#86efac; border-color:rgba(134,239,172,0.25); }
 
-  .back-btn {
-    display: inline-block;
-    background: #f1f3f4;
-    color: #0077a8 !important;
-    border: 1px solid #dadce0;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 8.5pt;
-    margin: 4px 3px 14px 0;
-  }
-  .back-btn:hover { background: #e8eaed; }
+.prob-card-right { text-align:center; flex-shrink:0; }
+.prob-badge { font-family:var(--font-mono); font-size:20px; font-weight:700; padding:10px 16px; border-radius:8px; display:block; margin-bottom:6px; }
+.prob-badge-label { font-family:var(--font-mono); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); display:block; }
+.prob-est { font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin-top:4px; }
 
-  .jump-link { color: #0077a8; font-weight: 600; text-decoration: underline; }
+.prob-launch-btn {
+  margin-top:14px; background:var(--spa-cyan); color:#040810; font-weight:700;
+  font-size:11px; padding:8px 20px; border-radius:6px; border:none; cursor:pointer;
+  letter-spacing:0.5px; transition:all 0.2s; display:block; width:100%; text-align:center;
+}
+.prob-launch-btn:hover { background:#22d3f0; transform:scale(1.03); }
 
-  /* ── QUOTE BOX ── */
-  .quote-box {
-    background: #eef9fd;
-    border-left: 4px solid #00a3e0;
-    padding: 10px 14px;
-    font-style: italic;
-    margin: 10px 0;
-    border-radius: 0 6px 6px 0;
-    font-size: 9.5pt;
-  }
-  .quote-box.green { background: #f0faf4; border-left-color: #1e8e3e; }
+.checklist-card {
+  background:var(--bg-card); border:1px solid rgba(245,158,11,0.25); border-radius:12px;
+  padding:20px 22px;
+}
+.checklist-title { font-family:var(--font-mono); font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--amber); margin-bottom:14px; }
+.checklist-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.cl-item { font-size:12px; color:var(--text-secondary); line-height:1.6; display:flex; gap:8px; }
+.cl-icon { flex-shrink:0; color:var(--amber); }
 
-  /* ── CODE BLOCKS ── */
-  pre, code { font-family: "Consolas", "Courier New", monospace; }
-  pre {
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 14px 16px;
-    border-radius: 6px;
-    overflow-x: auto;
-    font-size: 9.5pt;
-    line-height: 1.5;
-    margin: 10px 0 16px;
-  }
-  code {
-    background: #f1f3f4;
-    color: #c5221f;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-size: 9pt;
-  }
-  pre code { background: transparent; color: inherit; padding: 0; }
+/* ── INTERVIEW SCREEN ── */
+.wb-hud {
+  height:48px; background:var(--bg-deep); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0;
+}
+.wb-hud-badge { font-family:var(--font-mono); font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--spa-cyan); background:var(--spa-cyan-dim); border:1px solid var(--border-md); padding:3px 10px; border-radius:3px; }
+.wb-hud-problem { font-size:13px; font-weight:600; color:var(--text-primary); }
+.wb-hud-center { flex:1; display:flex; flex-direction:column; align-items:center; gap:1px; }
+.wb-timer { font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--text-primary); letter-spacing:2px; }
+.wb-phase-label { font-family:var(--font-mono); font-size:9px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; }
+.wb-hud-right { display:flex; align-items:center; gap:8px; }
+.wb-block-counter { font-family:var(--font-mono); font-size:11px; color:var(--text-secondary); background:rgba(255,255,255,0.04); padding:4px 10px; border-radius:4px; border:1px solid var(--border); }
+.wb-back-btn { font-family:var(--font-mono); font-size:9px; letter-spacing:1px; text-transform:uppercase; background:transparent; border:1px solid var(--border); color:var(--text-dim); padding:4px 10px; border-radius:4px; cursor:pointer; transition:all 0.2s; }
+.wb-back-btn:hover { border-color:var(--border-hi); color:var(--text-primary); }
 
-  /* ── TABLES ── */
-  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 9.5pt; }
-  th, td { border: 1px solid #dadce0; padding: 8px 10px; text-align: left; vertical-align: top; }
-  th { background: #f8f9fa; font-weight: 600; color: #202124; }
-  tr:nth-child(even) td { background: #fcfcfc; }
-  .table-csharp { color: #1557b0; font-weight: 600; }
-  .table-java { color: #d93025; font-weight: 600; }
+.wb-interview-wrap {
+  flex:1; display:flex; overflow:hidden;
+}
 
-  ul, ol { margin: 6px 0 12px; padding-left: 22px; }
-  li { margin-bottom: 4px; }
+/* LEFT: Chat */
+.wb-chat-panel {
+  width:300px; flex-shrink:0; border-right:1px solid var(--border);
+  display:flex; flex-direction:column; background:var(--bg-panel);
+}
+.wb-chat-header {
+  padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-shrink:0;
+}
+.wb-interviewer-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#1e3a5f,#0f2040); border:2px solid var(--border-md); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--spa-cyan); flex-shrink:0; }
+.wb-interviewer-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+.wb-interviewer-title { font-size:10px; color:var(--text-dim); font-family:var(--font-mono); letter-spacing:0.5px; }
+.wb-online-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; margin-left:auto; box-shadow:0 0 8px rgba(34,197,94,0.6); animation:pulse-dot 2s ease-in-out infinite; flex-shrink:0; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-  /* ── FLOATING NAV ── */
-  .floating-nav {
-    position: sticky; top: 0; z-index: 100;
-    background: #fff; border-bottom: 2px solid #00a3e0;
-    padding: 8px 0; margin-bottom: 20px;
-    display: flex; flex-wrap: wrap; gap: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
+.wb-chat-messages { flex:1; overflow-y:auto; padding:14px 14px; display:flex; flex-direction:column; gap:10px; }
+.wb-chat-messages::-webkit-scrollbar { width:3px; }
+.wb-chat-messages::-webkit-scrollbar-thumb { background:var(--border-md); }
+
+.wb-msg { max-width:90%; animation:fadeInUp 0.3s ease; }
+@keyframes fadeInUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+.wb-msg.interviewer { align-self:flex-start; }
+.wb-msg.system { align-self:center; }
+.wb-msg-bubble { padding:9px 12px; border-radius:10px; font-size:12px; line-height:1.65; }
+.wb-msg.interviewer .wb-msg-bubble { background:var(--bg-card); border:1px solid var(--border); color:var(--text-primary); border-radius:4px 10px 10px 10px; }
+.wb-msg.system .wb-msg-bubble { background:rgba(0,163,224,0.07); border:1px solid rgba(0,163,224,0.2); color:var(--text-secondary); font-size:11px; font-family:var(--font-mono); letter-spacing:0.3px; text-align:center; border-radius:4px; }
+.wb-msg-time { font-size:9px; color:var(--text-dim); font-family:var(--font-mono); margin-top:3px; padding:0 2px; }
+
+.wb-chat-footer { padding:10px 12px; border-top:1px solid var(--border); flex-shrink:0; }
+.wb-notes-input { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text-primary); font-size:11px; font-family:var(--font-mono); resize:none; outline:none; line-height:1.5; }
+.wb-notes-input:focus { border-color:var(--border-hi); }
+.wb-notes-input::placeholder { color:var(--text-dim); }
+
+/* RIGHT: Board Content */
+.wb-right-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Problem header strip */
+.wb-prob-strip {
+  padding:10px 18px; border-bottom:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; gap:12px; background:var(--bg-panel);
+}
+.wb-prob-strip-badge { font-family:var(--font-mono); font-size:11px; font-weight:700; padding:3px 10px; border-radius:4px; }
+.wb-prob-strip-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+.wb-prob-strip-why { font-size:11px; color:var(--text-dim); margin-left:auto; font-style:italic; max-width:300px; text-align:right; line-height:1.4; }
+
+/* Language selector */
+.wb-lang-bar { display:flex; align-items:center; gap:8px; padding:8px 18px; border-bottom:1px solid var(--border); background:var(--bg-deep); flex-shrink:0; }
+.wb-lang-label { font-family:var(--font-mono); font-size:9px; color:var(--text-dim); letter-spacing:1.5px; text-transform:uppercase; }
+.wb-lang-btn { font-family:var(--font-mono); font-size:10px; font-weight:600; padding:3px 12px; border-radius:4px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
+.wb-lang-btn.active { background:var(--spa-cyan-dim); border-color:var(--border-hi); color:var(--spa-cyan); }
+.wb-lang-btn:hover:not(.active) { border-color:var(--border-md); color:var(--text-secondary); }
+
+/* Block display */
+.wb-board-area { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:14px; }
+.wb-board-area::-webkit-scrollbar { width:4px; }
+.wb-board-area::-webkit-scrollbar-thumb { background:var(--border-md); }
+
+.wb-block-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.wb-block-num { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--spa-cyan); background:var(--spa-cyan-dim); padding:2px 8px; border-radius:3px; }
+.wb-block-label-text { font-size:13px; font-weight:600; color:var(--text-primary); }
+
+.wb-code-display {
+  background:#060d18; border:1px solid rgba(0,163,224,0.12); border-radius:8px;
+  padding:16px 18px; font-family:var(--font-mono); font-size:12.5px; line-height:1.7;
+  color:#a8d8f0; overflow-x:auto; white-space:pre; margin-bottom:10px;
+  border-left:3px solid var(--spa-cyan);
+}
+
+.wb-say-box {
+  background:rgba(0,163,224,0.06); border:1px solid rgba(0,163,224,0.2);
+  border-radius:6px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start;
+  margin-bottom:10px;
+}
+.wb-say-icon { font-size:14px; flex-shrink:0; }
+.wb-say-label { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--spa-cyan); margin-bottom:4px; }
+.wb-say-text { font-size:13px; color:#bae6fd; line-height:1.65; font-style:italic; }
+
+/* Block nav */
+.wb-block-nav {
+  display:flex; align-items:center; gap:10px; padding:10px 18px;
+  border-top:1px solid var(--border); background:var(--bg-panel); flex-shrink:0;
+}
+.wb-nav-btn { font-family:var(--font-mono); font-size:10px; font-weight:600; padding:6px 16px; border-radius:5px; border:1px solid var(--border); background:transparent; color:var(--text-secondary); cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
+.wb-nav-btn:hover:not(:disabled) { border-color:var(--border-hi); color:var(--text-primary); background:rgba(255,255,255,0.03); }
+.wb-nav-btn:disabled { opacity:0.25; cursor:not-allowed; }
+.wb-nav-btn.primary { background:var(--spa-cyan); border-color:var(--spa-cyan); color:#040810; }
+.wb-nav-btn.primary:hover { background:#22d3f0; }
+.wb-nav-progress { flex:1; display:flex; gap:5px; justify-content:center; }
+.wb-nav-dot { width:8px; height:8px; border-radius:50%; background:var(--border-md); transition:all 0.2s; }
+.wb-nav-dot.active { background:var(--spa-cyan); box-shadow:0 0 6px rgba(0,163,224,0.5); }
+.wb-nav-dot.done { background:rgba(0,163,224,0.35); }
+
+/* Follow-ups panel */
+.wb-followups-panel {
+  border-top:1px solid var(--border); background:var(--bg-deep); flex-shrink:0;
+  max-height:0; overflow:hidden; transition:max-height 0.4s ease;
+}
+.wb-followups-panel.open { max-height:280px; }
+.wb-followups-inner { padding:14px 18px; overflow-y:auto; max-height:280px; }
+.wb-followups-inner::-webkit-scrollbar { width:3px; }
+.wb-followups-inner::-webkit-scrollbar-thumb { background:var(--border); }
+.wb-followups-title { font-family:var(--font-mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--amber); margin-bottom:10px; }
+.wb-fq-item { margin-bottom:10px; }
+.wb-fq-q { font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:4px; display:flex; gap:6px; }
+.wb-fq-q::before { content:'Q·'; font-family:var(--font-mono); font-size:10px; color:var(--amber); flex-shrink:0; }
+.wb-fq-a { font-size:12px; color:var(--text-secondary); line-height:1.65; padding-left:20px; border-left:2px solid var(--border-md); }
+
+.wb-followup-toggle-bar {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:7px 18px; border-top:1px solid var(--border); background:var(--bg-panel); flex-shrink:0;
+}
+.wb-followup-toggle { font-family:var(--font-mono); font-size:10px; font-weight:600; letter-spacing:0.5px; padding:4px 14px; border-radius:4px; border:1px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.08); color:var(--amber); cursor:pointer; transition:all 0.2s; }
+.wb-followup-toggle:hover { background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.5); }
+.wb-followup-toggle.open { background:rgba(245,158,11,0.15); }
+.wb-board-corner-note { font-family:var(--font-mono); font-size:10px; color:var(--text-dim); background:rgba(0,163,224,0.05); border:1px solid var(--border); padding:3px 10px; border-radius:4px; }
+
+/* ── SCREEN WRAPPER ── */
+#screen-wb-interview { display:flex; flex-direction:column; }
 </style>
 </head>
 <body>
 
-<div class="doc-header" id="top">
-  <div style="float: right; margin-top: 4px;">
-    <a href="ORCA.html" class="nav-btn green">▶ Open ORCA Simulator</a>
-    <a href="index.html" class="nav-btn">← Mission Launcher</a>
+<!-- ================================================================
+     LANDING SCREEN
+================================================================ -->
+<div id="screen-landing" class="screen active">
+  <div class="launcher-bg"></div>
+  <div class="scan-lines"></div>
+  <div class="wb-landing" style="position:relative;z-index:3;">
+
+    <div class="classif-banner">UNCLASSIFIED // PERSONAL PRACTICE · AIDAN MCDOWELL</div>
+
+    <div class="wb-header">
+      <div class="wb-eyebrow">SPA · ORCA Group · San Diego, CA</div>
+      <h1 class="wb-title">Dev Team <strong>Whiteboard Session</strong></h1>
+      <p class="wb-subtitle">C++ &amp; Java · Select a problem to run the scripted whiteboard flow.<br>Ordered highest → lowest probability based on your screener Q&amp;A.</p>
+    </div>
+
+    <div class="prob-grid" id="probGrid"></div>
+
+    <div class="checklist-card">
+      <div class="checklist-title">⚡ Whiteboard Execution Rules — Always</div>
+      <div class="checklist-grid">
+        <div class="cl-item"><span class="cl-icon">①</span><span>Clarify edge cases <em>before</em> picking up the marker</span></div>
+        <div class="cl-item"><span class="cl-icon">②</span><span>Write Big-O in the corner <em>without being asked</em></span></div>
+        <div class="cl-item"><span class="cl-icon">③</span><span>C++: <code style="font-size:11px;color:#7dd3fc;">virtual ~Base() = default</code> on every base class</span></div>
+        <div class="cl-item"><span class="cl-icon">④</span><span>C++: <code style="font-size:11px;color:#7dd3fc;">override</code> on every derived method</span></div>
+        <div class="cl-item"><span class="cl-icon">⑤</span><span>C++: <code style="font-size:11px;color:#7dd3fc;">unique_ptr</code> — never raw pointers</span></div>
+        <div class="cl-item"><span class="cl-icon">⑥</span><span>Java: <code style="font-size:11px;color:#86efac;">@Override</code> on every override</span></div>
+        <div class="cl-item"><span class="cl-icon">⑦</span><span>Pass non-primitives by <code style="font-size:11px;color:#7dd3fc;">const T&amp;</code>, not by value</span></div>
+        <div class="cl-item"><span class="cl-icon">⑧</span><span>Mark non-modifying methods <code style="font-size:11px;color:#7dd3fc;">const</code></span></div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <a href="index.html" style="font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--text-dim);text-decoration:none;">← MISSION HUB</a>
+    </div>
   </div>
-  <h1>SPA ORCA Technical Screen &amp; Whiteboard Cheatsheet</h1>
-  <p><strong>Candidate:</strong> Aidan McDowell &nbsp;|&nbsp; <strong>Target:</strong> Systems Planning and Analysis, Inc. (SPA) — SLA Division / ORCA Group &nbsp;|&nbsp; <strong>Classification:</strong> UNCLASSIFIED</p>
 </div>
 
-<!-- FLOATING NAV BAR -->
-<div class="floating-nav">
-  <a href="#strategy" class="nav-btn">1. Strategy &amp; Dynamics</a>
-  <a href="#csharp-java" class="nav-btn orange">2. C# → Java Translation</a>
-  <a href="#framework" class="nav-btn purple">3. 5-Step Execution Framework</a>
-  <a href="#archetypes" class="nav-btn green">4. 3 Problem Archetypes</a>
-  <a href="#phrases" class="nav-btn">5. Verbatim Speaking Scripts</a>
-  <a href="#domain" class="nav-btn">6. Defense Domain Primer</a>
-  <a href="ORCA.html" class="nav-btn" style="background: #202124;">💻 Test in ORCA Console</a>
-</div>
+<!-- ================================================================
+     INTERVIEW SCREEN
+================================================================ -->
+<div id="screen-wb-interview" class="screen">
 
-<!-- SECTION 1 -->
-<h2 id="strategy">1. Strategy for Hiring Team (Engineering Leads &amp; OR Analysts)</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
-
-<div class="phase-box">
-  <div class="phase-title">Who You Are Talking To &amp; What They Value</div>
-  <span class="trigger">The ORCA group at SPA does not build generic web apps — they build defense simulation engines that Pentagons brief on.</span>
-  <p>Your interviewers will consist of <strong>Senior Software Engineers, Modeling &amp; Simulation Developers, and Operations Research Analysts</strong>. Their priorities are fundamentally different from Big Tech:</p>
-  <ul>
-    <li><strong>Software Serving Analysis:</strong> Frame your code as an enabler for decision-makers. OR analysts run Monte Carlo campaigns with 10,000 runs — if your simulation loop is non-deterministic or leaks memory, the entire fleet acquisition brief fails.</li>
-    <li><strong>Data Integrity &gt; Clever Hacks:</strong> Prefer clean, readable, defensively validated OOP classes over obscure one-line functional tricks.</li>
-    <li><strong>Onsite &amp; Clearance Readiness:</strong> Reaffirm comfort with daily onsite collaboration in San Diego. Classified wargames and ITAR-restricted radar data cannot leave SCIFs.</li>
-    <li><strong>Language Strategy:</strong> <strong>Use Java or C#. Avoid C++ on the whiteboard.</strong> The team develops primarily in Java and C#. Both have identical garbage collection, reference semantics, and standard collections. Avoid C++ pointer syntax and manual memory allocation under whiteboard pressure.</li>
-  </ul>
-</div>
-
-<!-- SECTION 2 -->
-<h2 id="csharp-java">2. C# to Java Translation Cheatsheet (Your Rapid Reference)</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
-
-<p>You have strong C# intuition. Java is 90% identical, but small syntax differences will trip you up on a whiteboard. Use this exact comparison table:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Concept</th>
-      <th class="table-csharp">C# (Your Comfort Zone)</th>
-      <th class="table-java">Java (Target Language)</th>
-      <th>Whiteboard Note</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Inheritance / Interface</strong></td>
-      <td><code>class A : Base, IFoo</code></td>
-      <td><code>class A extends Base implements Foo</code></td>
-      <td>Use <code>extends</code> for class, <code>implements</code> for interface</td>
-    </tr>
-    <tr>
-      <td><strong>Print to Console</strong></td>
-      <td><code>Console.WriteLine(x);</code></td>
-      <td><code>System.out.println(x);</code></td>
-      <td>Never write Console.WriteLine in Java</td>
-    </tr>
-    <tr>
-      <td><strong>Dynamic List</strong></td>
-      <td><code>List&lt;T&gt; list = new();</code></td>
-      <td><code>List&lt;T&gt; list = new ArrayList&lt;&gt;();</code></td>
-      <td>Interface on left, concrete type on right</td>
-    </tr>
-    <tr>
-      <td><strong>List Size</strong></td>
-      <td><code>list.Count</code></td>
-      <td><code>list.size()</code></td>
-      <td>Method call in Java (with parentheses)</td>
-    </tr>
-    <tr>
-      <td><strong>Dictionary / Map</strong></td>
-      <td><code>Dictionary&lt;K,V&gt; map = new();</code></td>
-      <td><code>Map&lt;K,V&gt; map = new HashMap&lt;&gt;();</code></td>
-      <td>Interface is <code>Map</code>, concrete is <code>HashMap</code></td>
-    </tr>
-    <tr>
-      <td><strong>Map Operations</strong></td>
-      <td><code>map[k] = v;</code><br><code>map.ContainsKey(k);</code></td>
-      <td><code>map.put(k, v);</code><br><code>map.containsKey(k);</code></td>
-      <td>No square bracket indexing on Java Maps!</td>
-    </tr>
-    <tr>
-      <td><strong>Map Get with Default</strong></td>
-      <td><code>map.GetValueOrDefault(k, def)</code></td>
-      <td><code>map.getOrDefault(k, def)</code></td>
-      <td>Exact same O(1) semantics</td>
-    </tr>
-    <tr>
-      <td><strong>String Length &amp; Empty</strong></td>
-      <td><code>s.Length</code><br><code>string.IsNullOrEmpty(s)</code></td>
-      <td><code>s.length()</code><br><code>s == null || s.isEmpty()</code></td>
-      <td>Always check null first before <code>isEmpty()</code></td>
-    </tr>
-    <tr>
-      <td><strong>Base Class Constructor</strong></td>
-      <td><code>base(id, speed)</code></td>
-      <td><code>super(id, speed);</code></td>
-      <td><code>super(...)</code> must be line 1 of constructor</td>
-    </tr>
-    <tr>
-      <td><strong>Constants</strong></td>
-      <td><code>const int MAX = 100;</code></td>
-      <td><code>final int MAX = 100;</code></td>
-      <td>Use <code>final</code> in Java</td>
-    </tr>
-    <tr>
-      <td><strong>PriorityQueue (Min-Heap)</strong></td>
-      <td><code>PriorityQueue&lt;T, P&gt;</code> (.NET 6+)</td>
-      <td><code>PriorityQueue&lt;Track&gt; pq = new PriorityQueue&lt;&gt;((a,b) -&gt; Double.compare(a.getTti(), b.getTti()));</code></td>
-      <td>Crucial for threat evaluator problems</td>
-    </tr>
-    <tr>
-      <td><strong>Thread-Safe Map</strong></td>
-      <td><code>ConcurrentDictionary&lt;K,V&gt;</code></td>
-      <td><code>ConcurrentHashMap&lt;K,V&gt;</code></td>
-      <td>For multi-threaded simulation loops</td>
-    </tr>
-  </tbody>
-</table>
-
-<div class="phase-box warn">
-  <div class="phase-title">Freeze Recovery Technique</div>
-  <span class="trigger">If you blank on a method name on the whiteboard:</span>
-  <div class="quote-box">
-    "In Java I'll use <code>map.getOrDefault()</code> here — exact same semantics as C#'s <code>GetValueOrDefault()</code>. We want O(1) retrieval without throwing KeyNotFoundException."
+  <!-- HUD -->
+  <div class="wb-hud">
+    <div class="wb-hud-badge">🛡️ SPA ORCA · WHITEBOARD</div>
+    <div class="wb-hud-problem" id="hudProblemName">—</div>
+    <div class="wb-hud-center">
+      <div class="wb-timer" id="wbTimer">45:00</div>
+      <div class="wb-phase-label" id="wbPhaseLabel">INTRO</div>
+    </div>
+    <div class="wb-hud-right">
+      <div class="wb-block-counter" id="wbBlockCounter">Block 1 / 1</div>
+      <button class="wb-back-btn" onclick="goLanding()">← BACK</button>
+    </div>
   </div>
-  <p>The interviewers will nod and tell you to proceed. They evaluate your architectural choices and data structures, not memorized syntax.</p>
+
+  <!-- MAIN LAYOUT -->
+  <div class="wb-interview-wrap">
+
+    <!-- LEFT: CHAT -->
+    <div class="wb-chat-panel">
+      <div class="wb-chat-header">
+        <div class="wb-interviewer-avatar">O</div>
+        <div>
+          <div class="wb-interviewer-name">ORCA Dev Team</div>
+          <div class="wb-interviewer-title">SOFTWARE ENGINEER · SPA · SAN DIEGO</div>
+        </div>
+        <div class="wb-online-dot"></div>
+      </div>
+      <div class="wb-chat-messages" id="wbChatMessages"></div>
+      <div class="wb-chat-footer">
+        <textarea class="wb-notes-input" id="wbNotes" rows="3" placeholder="Your notes… (not graded)"></textarea>
+      </div>
+    </div>
+
+    <!-- RIGHT: BOARD CONTENT -->
+    <div class="wb-right-panel">
+
+      <!-- Problem strip -->
+      <div class="wb-prob-strip">
+        <div class="wb-prob-strip-badge prob-95" id="stripBadge">95%</div>
+        <div class="wb-prob-strip-title" id="stripTitle">Problem Title</div>
+        <div class="wb-prob-strip-why" id="stripWhy">Why they'll ask it</div>
+      </div>
+
+      <!-- Language selector -->
+      <div class="wb-lang-bar">
+        <span class="wb-lang-label">Language:</span>
+        <button class="wb-lang-btn active" id="btnCpp" onclick="setLang('cpp')">C++17</button>
+        <button class="wb-lang-btn" id="btnJava" onclick="setLang('java')">Java</button>
+      </div>
+
+      <!-- Block area -->
+      <div class="wb-board-area" id="wbBoardArea">
+        <!-- Injected by JS -->
+      </div>
+
+      <!-- Block nav bar -->
+      <div class="wb-block-nav">
+        <button class="wb-nav-btn" id="btnPrev" onclick="prevBlock()">← Prev</button>
+        <div class="wb-nav-progress" id="navDots"></div>
+        <button class="wb-nav-btn primary" id="btnNext" onclick="nextBlock()">Next →</button>
+      </div>
+
+      <!-- Follow-up toggle -->
+      <div class="wb-followup-toggle-bar">
+        <button class="wb-followup-toggle" id="followupToggle" onclick="toggleFollowups()">⚠ Show Follow-up Q&amp;A</button>
+        <span class="wb-board-corner-note" id="cornerNote">O(?) — write in corner</span>
+      </div>
+
+      <!-- Follow-ups panel -->
+      <div class="wb-followups-panel" id="wbFollowups">
+        <div class="wb-followups-inner" id="wbFollowupsInner"></div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
-<!-- SECTION 3 -->
-<h2 id="framework">3. The 5-Step Incomplete-Problem Whiteboard Execution Framework</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
+<!-- ================================================================
+     SCENARIO DATA + APP LOGIC
+================================================================ -->
+<script>
+/* ── PROBLEM DATA ── */
+const PROBLEMS = [
+  {
+    id: "p1",
+    rank: 1,
+    title: "Polymorphic Entity Hierarchy",
+    prob: 95,
+    probClass: "prob-95",
+    difficulty: "High",
+    estMin: 12,
+    why: "They drilled abstraction, encapsulation, access modifiers, overriding vs overloading, and memory leaks. They'll check if you remember the virtual destructor and unique_ptr.",
+    tags: ["C++", "Java", "OOP", "virtual", "unique_ptr", "Abstract Class"],
+    cornerNote: "Dynamic dispatch: O(1) vtable lookup",
+    interviewer: [
+      { delay: 0,    text: "Alright Aidan — let's jump in. On the board I want you to design a base class hierarchy for a simulation system. Entities can be submarines, surface ships, or aircraft — all of them need an update method called every tick. Walk us through your design." },
+      { delay: 35000, text: "Good. Before you go further — what would happen if we deleted a Submarine through a base class pointer without the virtual destructor?" },
+      { delay: 80000, text: "How would you store a mixed collection of these entities in a single container?" },
+    ],
+    cpp_blocks: [
+      {
+        label: "Base Class + Virtual Destructor",
+        code:
+`#include <iostream>
+#include <memory>
+#include <vector>
 
-<p>SPA interviewers typically give you an <strong>incomplete class hierarchy</strong> or a buggy method and ask: <em>"Complete this method so our radar tracker correctly handles this scenario."</em> Follow this exact 5-step framework:</p>
+class SimEntity {
+protected:
+    int id; // derived classes can access, outside can't
 
-<div class="phase-box">
-  <div class="phase-title">Step 1: Read &amp; Trace Aloud (Don't Write Code Yet!)</div>
-  <p>Spend the first 60 seconds reading the given code aloud:</p>
-  <ul>
-    <li>"I see we have an abstract <code>Track</code> base class with common telemetry fields."</li>
-    <li>"The <code>TrackManager</code> maintains an internal map, and we have an unimplemented <code>ingest(Track track)</code> method."</li>
-    <li>"Let's identify the contract: what arguments arrive, what should be returned, and what side effects are expected."</li>
-  </ul>
-</div>
+public:
+    explicit SimEntity(int entity_id) : id(entity_id) {}
 
-<div class="phase-box warn">
-  <div class="phase-title">Step 2: Clarify Constraints &amp; Edge Cases</div>
-  <p>Ask 2–3 sharp questions that prove defense modeling maturity:</p>
-  <ul>
-    <li><em>"Can tracks arrive out of order, or with duplicated track IDs?"</em> (Answer: yes, duplicate IDs should overwrite with newest kinematics).</li>
-    <li><em>"What are the valid operational boundaries for latitude and longitude?"</em> (-90 to +90 lat, -180 to +180 lon).</li>
-    <li><em>"What is the expected scale — 10 tracks per second or 50,000 in a batch simulation?"</em> (Influences choosing HashMap vs ConcurrentHashMap).</li>
-  </ul>
-</div>
+    // CRITICAL: virtual destructor prevents memory leaks
+    // on deletion through a base pointer
+    virtual ~SimEntity() = default;
 
-<div class="phase-box purple">
-  <div class="phase-title">Step 3: Identify the Missing Pattern / Gap</div>
-  <p>Diagnose what's missing in the provided code:</p>
-  <ul>
-    <li><strong>Missing Polymorphism:</strong> Are they using a brittle <code>if (type == "RADAR") else if (type == "SONAR")</code> chain? Say: <em>"This violates the Open/Closed Principle — we should use a Factory/Registry pattern."</em></li>
-    <li><strong>Wrong Data Structure:</strong> Are they sorting an ArrayList every tick? Say: <em>"Sorting an ArrayList is O(n log n) every frame. A <code>PriorityQueue</code> gives us O(log n) insertions and O(1) peek."</em></li>
-    <li><strong>Missing Defensive Guards:</strong> No null checks or coordinate range checks.</li>
-  </ul>
-</div>
+    virtual void update(double dt) = 0; // pure virtual — must implement
+    int getId() const { return id; }    // const getter — encapsulation`,
+        say: "I make SimEntity abstract with a pure virtual update — every entity has to fill that in. And I always mark the destructor virtual, because if we delete a derived object through a base pointer without it, the derived part never gets cleaned up and we leak memory."
+      },
+      {
+        label: "Derived Class with override",
+        code:
+`class Submarine : public SimEntity {
+private:
+    double depth;
 
-<div class="phase-box green">
-  <div class="phase-title">Step 4: Implement Cleanly with Helper Methods</div>
-  <p>Write clean, structured code on the board. Break large logic into readable helpers:</p>
-  <pre><code>// Clean structure
-public void ingest(Track track) {
-    if (!isValid(track)) return; // Guard clause
-    activeTracks.put(track.getTrackId(), track); // Upsert
-}</code></pre>
-</div>
+public:
+    Submarine(int id, double init_depth)
+        : SimEntity(id), depth(init_depth) {}
 
-<div class="phase-box">
-  <div class="phase-title">Step 5: Dry-Run Edge Cases with Concrete Values &amp; State Big-O</div>
-  <p>Before saying you're done, trace 3 edge cases on the board:</p>
-  <ol>
-    <li><code>track == null</code> → caught by guard clause, no NullPointerException.</li>
-    <li>Duplicate <code>trackId</code> → <code>activeTracks.put()</code> cleanly overwrites previous record, size stays constant.</li>
-    <li>Out-of-bounds coordinates (e.g. lat = 105.0) → rejected before reaching internal collection.</li>
-    <li><strong>State Time &amp; Space Complexity:</strong> "Ingestion is O(1) amortized lookup/insert for HashMap, O(n) space where n is active track count."</li>
-  </ol>
-</div>
-
-<!-- SECTION 4 -->
-<h2 id="archetypes">4. The 3 SPA Defense Modeling Problem Archetypes</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
-
-<h3>Archetype A: PriorityQueue Threat Allocator (Min-Heap by TTI)</h3>
-<p><strong>The Problem:</strong> DDG-79 has 15 hostile contacts. You must allocate weapons to the most urgent threats first (lowest Time to Impact = highest danger).</p>
-
-<pre><code class="language-java">// Java Implementation — Target Interview Code
-import java.util.*;
-
-public class ThreatEvaluator {
-
-    public List&lt;Track&gt; getHighestPriorityThreats(List&lt;Track&gt; tracks, int k) {
-        // 1. Guard against null, empty list, or non-positive k
-        if (tracks == null || tracks.isEmpty() || k &lt;= 0) {
-            return Collections.emptyList();
-        }
-
-        // 2. Min-Heap: smallest TTI comes off first
-        PriorityQueue&lt;Track&gt; pq = new PriorityQueue&lt;&gt;(
-            (a, b) -&gt; Double.compare(a.getTimeToImpact(), b.getTimeToImpact())
-        );
-
-        // 3. Filter: only active, un-neutralized hostiles
-        for (Track t : tracks) {
-            if (t != null && t.isHostile() && !t.isNeutralized()) {
-                pq.offer(t);
-            }
-        }
-
-        // 4. Extract top-K threats
-        List&lt;Track&gt; result = new ArrayList&lt;&gt;();
-        while (!pq.isEmpty() && result.size() &lt; k) {
-            result.add(pq.poll());
-        }
-
-        return result;
+    void update(double dt) override { // override = compiler checks signature
+        depth += 0.5 * dt;
     }
-}</code></pre>
+};`,
+        say: "Submarine inherits and fills in update with its own kinematic logic. I use override so the compiler immediately catches me if the signature ever drifts away from the base."
+      },
+      {
+        label: "Storage — unique_ptr collection",
+        code:
+`// Store as unique_ptr: automatic cleanup, no manual delete
+std::vector<std::unique_ptr<SimEntity>> entities;
 
-<div class="phase-box green">
-  <div class="phase-title">Analyst Discussion Points for Archetype A</div>
-  <ul>
-    <li><strong>Complexity:</strong> Building the heap takes O(n log n). Extracting k elements takes O(k log n). Total time is O(n log n), space is O(n).</li>
-    <li><strong>Monte Carlo $P_k$ Formula:</strong> If the analyst asks how weapons resolve, state:
-      <code>P_k_total = 1 - (1 - P_k_single)^n</code>, where <code>n</code> is rounds fired. For SM-6 ($P_k = 0.84$), a 2-shot salvo yields $1 - (0.16)^2 = 97.44\%$.
-    </li>
-  </ul>
-</div>
+entities.push_back(std::make_unique<Submarine>(1, 0.0));
 
-<h3>Archetype B: Track Ingestion &amp; Boundary Filter (Upsert &amp; Validation)</h3>
-<p><strong>The Problem:</strong> Write <code>ingest(Track track)</code> to validate incoming radar tracks against geographic boundaries and store them in the active map.</p>
+// Polymorphic dispatch — each entity runs its own update
+for (auto& e : entities) {
+    e->update(0.016); // 60 fps tick
+}`,
+        say: "I store them as unique_ptr inside a vector — unique_ptr owns the object and automatically deletes it when the vector goes away. No manual deletes, no leaks. And because update is virtual, each entity runs its own version at runtime."
+      },
+    ],
+    java_blocks: [
+      {
+        label: "Abstract Base Class",
+        code:
+`public abstract class SimEntity {
+    protected int id; // accessible to derived, hidden outside
 
-<pre><code class="language-java">// Java Implementation
-public class TrackManager {
-    private final Map&lt;String, Track&gt; activeTracks = new HashMap&lt;&gt;();
+    public SimEntity(int id) { this.id = id; }
 
-    public void ingest(Track track) {
-        // 1. Null check guard
-        if (track == null) return;
+    public abstract void update(double dt); // must implement
 
-        // 2. Empty ID guard
-        if (track.getTrackId() == null || track.getTrackId().trim().isEmpty()) return;
+    public int getId() { return id; } // encapsulation getter
+}`,
+        say: "Same design in Java — abstract base class with a protected ID and an abstract update method that every subclass has to implement."
+      },
+      {
+        label: "Derived Class with @Override",
+        code:
+`public class Submarine extends SimEntity {
+    private double depth;
 
-        // 3. Boundary validation
-        double lat = track.getLat();
-        double lon = track.getLon();
-        if (lat &lt; -90.0 || lat &gt; 90.0 || lon &lt; -180.0 || lon &gt; 180.0) return;
-
-        // 4 & 5. Upsert: overwrites existing record if present, inserts if new
-        activeTracks.put(track.getTrackId(), track);
+    public Submarine(int id, double depth) {
+        super(id);
+        this.depth = depth;
     }
 
-    public Map&lt;String, Track&gt; getActiveTracks() {
-        return Collections.unmodifiableMap(activeTracks);
+    @Override
+    public void update(double dt) {
+        this.depth += 0.5 * dt;
     }
-}</code></pre>
+}`,
+        say: "Submarine extends and overrides update. I always write @Override — if the signature doesn't match the base, the compiler refuses to build right there."
+      },
+      {
+        label: "Storage — List<SimEntity>",
+        code:
+`List<SimEntity> entities = new ArrayList<>();
+entities.add(new Submarine(1, 0.0));
 
-<h3>Archetype C: Extensible Sensor Parser (Factory / Registry Pattern)</h3>
-<p><strong>The Problem:</strong> Replace a fragile <code>if/else-if</code> parser with an extensible design that adheres to the Open/Closed Principle.</p>
+for (SimEntity e : entities) {
+    e.update(0.016); // polymorphic — runs correct subclass version
+}`,
+        say: "In Java I store them through the base type List<SimEntity> — that's programming to the interface. Java handles memory for me with garbage collection, so no destructor needed."
+      },
+    ],
+    followups: [
+      { q: "What happens without virtual on the destructor?", a: "If you delete a Submarine through a SimEntity* pointer, only the base destructor runs. Submarine's own destructor never fires — anything it owned (dynamic memory, file handles) leaks. This is one of the most common C++ bugs in large simulation codebases." },
+      { q: "Why unique_ptr not raw pointers?", a: "unique_ptr owns the object and automatically deletes it when it goes out of scope or the vector is cleared. Raw pointers need a manual delete everywhere — one missed delete is a leak, one double-delete is undefined behavior." },
+      { q: "What is object slicing?", a: "If you copy a Submarine into a SimEntity by value, you lose all the Submarine-specific fields — the object gets 'sliced' down to just the base portion. Storing by pointer or unique_ptr keeps the full derived object intact." },
+      { q: "What's id protected instead of private?", a: "Protected lets derived classes use id directly without going through a getter — useful for kinematics math inside update. Private would force a getter call on every tick, adding unnecessary overhead." },
+    ]
+  },
 
-<pre><code class="language-java">// Java Implementation
-public interface SensorParser {
-    Track parseRecord(byte[] payload);
+  {
+    id: "p2",
+    rank: 2,
+    title: "Overloading vs. Overriding Trap",
+    prob: 87,
+    probClass: "prob-87",
+    difficulty: "Medium",
+    estMin: 8,
+    why: "They tested you specifically on changing return types and parameter types. They'll write broken code on the board and ask: does this compile? Is this overriding?",
+    tags: ["C++", "Java", "override", "name-hiding", "@Override", "Covariant Returns"],
+    cornerNote: "Compile-time (overload) vs Runtime (override)",
+    interviewer: [
+      { delay: 0,     text: "Take a look at this code." },
+      { delay: 3000,  text: "Does this compile? And is configure in Radar actually overriding the base class version?" },
+      { delay: 60000, text: "How would you fix it? And what keyword prevents this class of bug entirely?" },
+    ],
+    cpp_blocks: [
+      {
+        label: "The Trap — shown by interviewer",
+        code:
+`class Sensor {
+public:
+    virtual void configure(int sample_rate) { /* ... */ }
+};
+
+class Radar : public Sensor {
+public:
+    // TRAP: parameter type changed int → double
+    // This is NOT an override — it's a new overload that HIDES the base
+    void configure(double sample_rate) { /* ... */ }
+};`,
+        say: "This compiles — but it's not overriding. The parameter type changed from int to double, so C++ treats this as a completely new function that hides the base class version. If you call configure through a Sensor pointer pointing at a Radar, the Radar version never runs."
+      },
+      {
+        label: "The Fix — add override",
+        code:
+`class Radar : public Sensor {
+public:
+    // override keyword forces compiler to verify the signature matches
+    // If it doesn't, compilation fails — catches the bug immediately
+    void configure(int sample_rate) override { /* ... */ }
+};`,
+        say: "The fix is two things: match the parameter type exactly, and add override. If you write override and the signature doesn't match the base, the compiler refuses to build — you catch the bug at compile time, not at 3am during a test run."
+      },
+      {
+        label: "Covariant Return — the one legal exception",
+        code:
+`class SensorFactory {
+public:
+    virtual Sensor* create() { return new Sensor(); }
+};
+
+class RadarFactory : public SensorFactory {
+public:
+    // LEGAL: Radar* is a narrower type than Sensor* (covariant return)
+    Radar* create() override { return new Radar(); }
+};`,
+        say: "The only part of the signature that's allowed to change during an override is the return type, and only in one direction: the derived class can return a more specific type than the base. A Radar* is a Sensor*, so this is valid — it's called a covariant return."
+      },
+    ],
+    java_blocks: [
+      {
+        label: "The Trap — Java equivalent",
+        code:
+`public class Sensor {
+    public void configure(int sampleRate) { /* ... */ }
 }
 
-public class SensorIngestionService {
-    // Registry of parsers by sensor type
-    private final Map&lt;SensorType, SensorParser&gt; parsers = new HashMap&lt;&gt;();
-    private final Map&lt;String, Track&gt; activeTracks = new ConcurrentHashMap&lt;&gt;();
+public class Radar extends Sensor {
+    // TRAP: Without @Override, Java silently accepts this as a new overload
+    public void configure(double sampleRate) { /* ... */ }
+}`,
+        say: "Same trap in Java — the parameter type changed so this is a new overload, not an override. Without @Override, the compiler lets it through silently. A Sensor reference pointing at a Radar would never call this configure."
+      },
+      {
+        label: "The Fix — @Override annotation",
+        code:
+`public class Radar extends Sensor {
+    // @Override: compiler verifies the signature matches the parent
+    // If it doesn't, it's a compile error — not a runtime surprise
+    @Override
+    public void configure(int sampleRate) { /* ... */ }
+}`,
+        say: "Add @Override and match the parameter type. If the signature doesn't match anything in the parent class, the compiler throws an error immediately. Always use @Override — it costs nothing and catches this entire class of bug."
+      },
+    ],
+    followups: [
+      { q: "What's name hiding in C++?", a: "When the derived class defines a function with the same name but different signature, it completely hides ALL overloads of that name from the base class — not just the one with the matching signature. You can't even call the base version through a derived object without explicitly scoping it as Sensor::configure()." },
+      { q: "Can you override and change access modifiers?", a: "In C++ you can make an override more accessible (private → public) but the virtual dispatch still respects the base class access rules through a base pointer. In Java, you can only widen access — you can't make an override more restrictive than the base." },
+      { q: "Can you overload a function by only changing the return type?", a: "No. The compiler can't distinguish calls by return type alone because you can call a function and ignore the return value. Changing only the return type is a compile error in both C++ and Java." },
+    ]
+  },
 
-    public void registerParser(SensorType type, SensorParser parser) {
-        if (type != null && parser != null) {
-            parsers.put(type, parser);
-        }
+  {
+    id: "p3",
+    rank: 3,
+    title: "Binary Search on a Sorted Vector",
+    prob: 78,
+    probClass: "prob-78",
+    difficulty: "Medium",
+    estMin: 10,
+    why: "You specifically recommended a sorted vector with binary search over hashing during the screener. They'll ask you to write the search or the sorted insertion to confirm you know the implementation.",
+    tags: ["C++", "Java", "O(log N)", "Binary Search", "Sorted Insert", "Cache Locality"],
+    cornerNote: "Search: O(log N) · Space: O(1) · Insert: O(N) shift",
+    interviewer: [
+      { delay: 0,     text: "You mentioned sorted vector with binary search during our discussion. Let's see it — write binary search on a sorted vector of ints." },
+      { delay: 40000, text: "Why did you write the midpoint that way instead of (low + high) / 2?" },
+      { delay: 80000, text: "If entries get added occasionally, how do you keep the vector sorted?" },
+    ],
+    cpp_blocks: [
+      {
+        label: "Binary Search — overflow-safe midpoint",
+        code:
+`#include <vector>
+
+int binarySearch(const std::vector<int>& arr, int target) {
+    int low  = 0;
+    int high = static_cast<int>(arr.size()) - 1;
+
+    while (low <= high) {
+        // low + (high - low) / 2  avoids integer overflow
+        // (low + high) / 2 overflows if both are near INT_MAX
+        int mid = low + (high - low) / 2;
+
+        if      (arr[mid] == target) return mid;
+        else if (arr[mid]  < target) low  = mid + 1;
+        else                         high = mid - 1;
+    }
+    return -1; // not found
+}`,
+        say: "I write it iteratively — constant stack space, no recursion risk. The midpoint uses low plus half the distance instead of the naive average, because if both low and high are large the addition overflows. This version can't. Each step cuts the search space in half — that's where O(log N) comes from."
+      },
+      {
+        label: "Sorted Insert — keep the vector sorted",
+        code:
+`#include <algorithm>
+
+void insertSorted(std::vector<int>& vec, int val) {
+    // lower_bound binary-searches for the right position: O(log N)
+    auto it = std::lower_bound(vec.begin(), vec.end(), val);
+    // insert shifts elements right: O(N) — acceptable because inserts are rare
+    vec.insert(it, val);
+}`,
+        say: "For inserting while keeping it sorted, lower_bound finds the right spot in O(log N). The actual insert is O(N) because elements shift right — but that's fine here because inserts are rare. The win is search speed and cache efficiency."
+      },
+      {
+        label: "Write in corner of board",
+        code:
+`// Complexity summary for the board corner:
+//
+//   Search:  O(log N) time  |  O(1) space (iterative)
+//   Insert:  O(log N) find  +  O(N) shift
+//   Space:   O(N) total
+//
+// vs HashMap:
+//   Search:  O(1) average   |  O(N) worst (hash collision)
+//   Cache:   Poor (pointer chasing)
+//
+// Sorted vector wins on cache locality — contiguous memory
+// means prefetcher loads next elements automatically`,
+        say: "I always write the Big-O summary in the corner before they ask. Sorted vector beats a hash map on cache efficiency because memory is contiguous — the CPU prefetcher loads the next elements automatically. Hash maps chase pointers all over the heap."
+      },
+    ],
+    java_blocks: [
+      {
+        label: "Binary Search — iterative",
+        code:
+`import java.util.List;
+
+public static int binarySearch(List<Integer> arr, int target) {
+    int low  = 0;
+    int high = arr.size() - 1;
+
+    while (low <= high) {
+        int mid = low + (high - low) / 2; // overflow-safe
+        int val = arr.get(mid);
+
+        if      (val == target) return mid;
+        else if (val  < target) low  = mid + 1;
+        else                    high = mid - 1;
+    }
+    return -1;
+}`,
+        say: "Same logic in Java — iterative, overflow-safe midpoint. Note: Collections.binarySearch exists in production, but writing it from scratch shows I understand what's actually happening underneath."
+      },
+      {
+        label: "Sorted Insert",
+        code:
+`import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
+
+public static void insertSorted(List<Integer> list, int val) {
+    // Collections.binarySearch returns insertion point if not found
+    int idx = Collections.binarySearch(list, val);
+    if (idx < 0) idx = -(idx + 1); // convert to insertion index
+    list.add(idx, val);
+}`,
+        say: "In Java I use Collections.binarySearch — if the value isn't there it returns a negative encoding of where it should go. I flip that to an insertion index and add it there. Same O(log N) find, O(N) shift trade-off."
+      },
+    ],
+    followups: [
+      { q: "Why iterative over recursive?", a: "Iterative uses O(1) stack space. Recursive uses O(log N) stack frames — on a small input it's fine, but in a large simulation with many concurrent searches it risks a stack overflow. Also iterative avoids the function call overhead on each step." },
+      { q: "What's the best case time complexity?", a: "O(1) — if the target happens to be at the exact midpoint on the first check, you return immediately." },
+      { q: "Why doesn't binary search work on linked lists?", a: "Binary search requires jumping to the midpoint in O(1), which only works with random access. Linked lists require walking to the midpoint sequentially, which is O(N) — that turns the whole search into O(N log N), worse than just scanning the list." },
+      { q: "When would you choose AVL tree instead?", a: "If inserts are frequent and you still need fast search, AVL gives O(log N) for both. The trade-off is pointer overhead and worse cache behavior. Sorted vector is ideal only when inserts are rare because the O(N) shift cost becomes acceptable." },
+    ]
+  },
+
+  {
+    id: "p4",
+    rank: 4,
+    title: "Tracking Memory Leaks via operator new / delete",
+    prob: 68,
+    probClass: "prob-68",
+    difficulty: "Medium",
+    estMin: 8,
+    why: "They explicitly asked what C++ functions you can override to intercept heap allocations. They may ask you to show per-class leak tracking on the board.",
+    tags: ["C++", "operator new", "operator delete", "Heap Tracking", "RAII", "ASan"],
+    cornerNote: "operator new/delete — intercept at class level",
+    interviewer: [
+      { delay: 0,     text: "In a large C++ simulation — say 50,000 active entities — how do you track which class is leaking heap memory? Show me on the board." },
+      { delay: 50000, text: "What if you wanted to track leaks globally across the entire program, not just one class?" },
+      { delay: 90000, text: "What's the modern production alternative to this approach?" },
+    ],
+    cpp_blocks: [
+      {
+        label: "Per-Class Leak Counter",
+        code:
+`#include <cstdlib>
+#include <cstddef>
+#include <iostream>
+
+class TrackedEntity {
+public:
+    static inline size_t active_allocations = 0;
+
+    // Called every time: TrackedEntity* e = new TrackedEntity(...)
+    void* operator new(size_t size) {
+        active_allocations++;
+        return std::malloc(size); // actual memory grab
     }
 
-    public void ingest(SensorType type, byte[] payload) {
-        SensorParser parser = parsers.get(type);
-        if (parser == null) {
-            throw new IllegalArgumentException("No parser registered for: " + type);
-        }
-
-        Track track = parser.parseRecord(payload);
-        if (track != null && track.isValid()) {
-            activeTracks.put(track.getTrackId(), track);
+    // Called every time: delete e;
+    void operator delete(void* ptr) noexcept {
+        if (ptr) {
+            active_allocations--;
+            std::free(ptr); // actual memory release
         }
     }
-}</code></pre>
+};`,
+        say: "I overload operator new and operator delete directly on the class. Every time one of these gets created on the heap the counter goes up, every delete brings it back down. The actual memory grab is still done by malloc and free underneath — I'm just wrapping them."
+      },
+      {
+        label: "Checking for leaks at shutdown",
+        code:
+`// At program exit — or at end of each simulation tick:
+if (TrackedEntity::active_allocations > 0) {
+    std::cerr << "[LEAK] "
+              << TrackedEntity::active_allocations
+              << " TrackedEntity objects never deleted\n";
+}
 
-<!-- SECTION 5 -->
-<h2 id="phrases">5. Verbatim Speaking Scripts for the Room</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
+// Same for array variants:
+void* operator new[](size_t size) {
+    active_allocations++;
+    return std::malloc(size);
+}
+void operator delete[](void* ptr) noexcept {
+    if (ptr) { active_allocations--; std::free(ptr); }
+}`,
+        say: "If active_allocations is anything other than zero at shutdown, something was created and never deleted. I also override the array versions new[] and delete[] — otherwise array allocations slip through the counter."
+      },
+      {
+        label: "Global tracking + modern alternative",
+        code:
+`// Global intercept — tracks ALL heap allocations in the program
+void* operator new(size_t size) {
+    ++global_alloc_count;
+    return std::malloc(size);
+}
+void operator delete(void* ptr) noexcept {
+    if (ptr) { --global_alloc_count; std::free(ptr); }
+}
 
-<div class="phase-box">
-  <div class="phase-title">Scripts for Key Moments</div>
-  <table style="width: 100%;">
-    <tr>
-      <th style="width: 30%;">Scenario</th>
-      <th>What to Say Verbatim</th>
-    </tr>
-    <tr>
-      <td><strong>Selecting Data Structure</strong></td>
-      <td><em>"I'm choosing a <code>PriorityQueue</code> with a min-heap comparator here because we need O(log n) insertions as radar sweeps detect new contacts, and O(1) retrieval of the earliest impact threat."</em></td>
-    </tr>
-    <tr>
-      <td><strong>Refactoring if/else Chain</strong></td>
-      <td><em>"This hardcoded if/else violates the Open/Closed Principle. When the Navy adds the SPY-6 radar next year, we shouldn't have to modify this battle-tested class. A Registry pattern lets us register new parsers without touching core ingestion."</em></td>
-    </tr>
-    <tr>
-      <td><strong>Addressing Simulation Threading</strong></td>
-      <td><em>"In a live simulation loop where radar ticks run on an asynchronous worker and the UI renders on the main thread, I'd swap the <code>HashMap</code> for a <code>ConcurrentHashMap</code> to avoid ConcurrentModificationException."</em></td>
-    </tr>
-    <tr>
-      <td><strong>Finishing Code on Board</strong></td>
-      <td><em>"The implementation is complete. Before stepping back, let me walk through 3 test cases: null payload, duplicate track ID, and coordinate boundary limits."</em></td>
-    </tr>
-  </table>
-</div>
+// Modern production alternative — no code changes needed:
+// Compile with: -fsanitize=address
+// Detects: leaks, double-free, use-after-free, buffer overflows
+// Zero runtime overhead in release builds (flag removed)`,
+        say: "For global tracking you do the same thing at global scope — now every allocation in the program hits your counter. In production though, I'd just compile with AddressSanitizer — fsanitize=address. It catches leaks, double-frees, and use-after-free with zero changes to the source code."
+      },
+    ],
+    java_blocks: [
+      {
+        label: "Java equivalent — no operator overloading",
+        code:
+`// Java has no operator new/delete — GC handles deallocation
+// For leak-like tracking, use weak references or finalize (deprecated)
 
-<!-- SECTION 6 -->
-<h2 id="domain">6. Defense Domain Primer for Software Engineers</h2>
-<a href="#top" class="back-btn">↑ Back to Top</a>
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
-<div class="phase-box">
-  <div class="phase-title">Terminology OR Analysts Use Every Day</div>
-  <ul>
-    <li><strong>C5ISR:</strong> Command, Control, Communications, Computers, Cyber, Intelligence, Surveillance, and Reconnaissance. The software layer connecting radars to missiles.</li>
-    <li><strong>AN/SPY-6 (AMDR):</strong> Air and Missile Defense Radar installed on Flight III Arleigh Burke destroyers (DDG-79 class). High sensitivity S-band radar capable of tracking ballistic and hypersonic targets simultaneously.</li>
-    <li><strong>ASCM vs HGV:</strong> ASCM (Anti-Ship Cruise Missile, Mach 0.8–2.5, sea-skimming). HGV (Hypersonic Glide Vehicle, Mach 5+, high altitude, erratic atmospheric maneuvers requiring immediate weapon allocation).</li>
-    <li><strong>Magazine Economy:</strong> You cannot fire an SM-6 ($4.3M) at every $20,000 drone. Defense models simulate multi-layer weapons: electronic jamming (EW) → close-in ESSM / RAM → kinetic SM-6.</li>
-  </ul>
-</div>
+public class TrackedEntity {
+    private static final AtomicInteger active = new AtomicInteger(0);
 
-<div style="text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid #dadce0;">
-  <a href="ORCA.html" class="nav-btn green" style="font-size: 11pt; padding: 8px 18px;">▶ Open ORCA Interactive Console</a>
-  <a href="rocketlab.html" class="nav-btn" style="font-size: 11pt; padding: 8px 18px;">🚀 Open Rocket Lab Simulator</a>
-  <a href="index.html" class="nav-btn" style="font-size: 11pt; padding: 8px 18px;">← Mission Launcher Hub</a>
-</div>
+    public TrackedEntity() {
+        active.incrementAndGet(); // count creation
+    }
 
+    @Override
+    protected void finalize() throws Throwable {
+        active.decrementAndGet(); // GC collected it
+        super.finalize();
+    }
+
+    public static int getActiveCount() { return active.get(); }
+}`,
+        say: "Java has no operator overloading so there's no direct equivalent. For approximate tracking you can use a constructor counter and finalize — but finalize is deprecated and unreliable since GC timing isn't deterministic. In Java you'd use a heap profiler like JVisualVM or JFR instead."
+      },
+    ],
+    followups: [
+      { q: "Why noexcept on operator delete?", a: "The C++ standard requires that operator delete never throws. If an exception was already propagating when delete was called — during stack unwinding from another exception — and delete also threw, the program would immediately call std::terminate. noexcept makes this contract explicit." },
+      { q: "What's the difference between per-class and global operator new?", a: "Per-class overloads only intercept allocations for that specific class. Global overloads intercept every allocation in the entire program — including internal library allocations. Global is more powerful but harder to filter and can interfere with third-party code." },
+      { q: "What's placement new?", a: "Placement new constructs an object at a specific memory address you provide — useful for object pools and custom allocators. You write new(ptr) MyClass() where ptr is pre-allocated memory. You then must manually call the destructor: ptr->~MyClass(). No delete — you manage the memory separately." },
+    ]
+  },
+
+  {
+    id: "p5",
+    rank: 5,
+    title: "Stack vs. Heap — Smart Pointer Design",
+    prob: 52,
+    probClass: "prob-52",
+    difficulty: "Medium",
+    estMin: 7,
+    why: "They did a deep dive on stack vs heap mechanics and RAII. They may ask you to sketch the memory layout or design a container using the right ownership model.",
+    tags: ["C++", "Stack", "Heap", "unique_ptr", "shared_ptr", "weak_ptr", "RAII"],
+    cornerNote: "Stack: O(1) alloc · Heap: O(?) amortized",
+    interviewer: [
+      { delay: 0,     text: "Walk me through the difference between stack and heap memory, then show me how RAII smart pointers handle lifetime on the board." },
+      { delay: 50000, text: "When would you use shared_ptr instead of unique_ptr?" },
+      { delay: 90000, text: "What's weak_ptr and when does it matter?" },
+    ],
+    cpp_blocks: [
+      {
+        label: "Stack vs Heap — memory layout",
+        code:
+`// STACK — automatic, scope-bound, LIFO
+void tick() {
+    int frame_count = 0;         // lives on stack
+    double dt = 0.016;           // lives on stack
+    // Both gone the moment tick() returns
+}
+
+// HEAP — manual or smart-pointer managed, long-lived
+void spawnEntity() {
+    // Raw pointer: YOU must delete — easy to forget
+    SimEntity* raw = new Submarine(1, 0.0); // heap
+    delete raw; // if you forget this, leak
+
+    // Smart pointer: automatically deleted when goes out of scope
+    auto entity = std::make_unique<Submarine>(1, 0.0); // heap
+    // entity deleted here automatically — no delete needed
+}`,
+        say: "Stack memory is managed by the CPU stack pointer — variables live exactly as long as the function they're in. Heap memory lives until you explicitly free it, or until a smart pointer goes out of scope. The risk with raw heap is forgetting the delete — smart pointers make that impossible."
+      },
+      {
+        label: "unique_ptr — exclusive ownership",
+        code:
+`#include <memory>
+
+// unique_ptr: one owner, non-copyable, movable
+auto sub = std::make_unique<Submarine>(1, 50.0);
+
+// Transfer ownership with move — sub is now null
+auto owner2 = std::move(sub);
+
+// Use in containers — vector owns all entries
+std::vector<std::unique_ptr<SimEntity>> fleet;
+fleet.push_back(std::make_unique<Submarine>(2, 100.0));
+fleet.push_back(std::make_unique<Submarine>(3, 200.0));
+// All submarines deleted when fleet goes out of scope`,
+        say: "unique_ptr means exactly one owner at a time. It can't be copied — you can only move it, which transfers ownership and nulls out the source. When it goes out of scope or the vector is cleared, the object gets deleted automatically."
+      },
+      {
+        label: "shared_ptr + weak_ptr — shared & breaking cycles",
+        code:
+`// shared_ptr: reference-counted, multiple owners
+auto sensor = std::make_shared<Sensor>(42);
+auto backup = sensor; // ref count = 2 — both own it
+// deleted when LAST shared_ptr goes away
+
+// weak_ptr: observes without owning — breaks reference cycles
+struct Node {
+    std::shared_ptr<Node> next;
+    std::weak_ptr<Node>   parent; // NOT a shared_ptr — would be a cycle
+};
+
+// Dereference a weak_ptr safely:
+if (auto locked = weakRef.lock()) { // returns shared_ptr or null
+    locked->update(dt);
+}`,
+        say: "shared_ptr is reference-counted — the object stays alive as long as at least one shared_ptr points to it. The danger is cycles: if A holds a shared_ptr to B and B holds one back to A, neither ever hits zero and both leak. weak_ptr breaks the cycle — it observes the object without keeping it alive."
+      },
+    ],
+    java_blocks: [
+      {
+        label: "Java memory model comparison",
+        code:
+`// Java: all objects on heap, GC handles deallocation
+// No manual new/delete — no smart pointers needed
+
+public void spawnEntity() {
+    Submarine sub = new Submarine(1, 50.0); // heap, GC managed
+    // sub eligible for GC when no more references
+}
+
+// For explicit lifecycle: AutoCloseable + try-with-resources
+public class Sensor implements AutoCloseable {
+    private final Resource resource = acquireResource();
+
+    @Override
+    public void close() { resource.release(); } // explicit cleanup
+
+    public static void useSensor() {
+        try (Sensor s = new Sensor()) {
+            s.read();
+        } // s.close() called automatically — Java's RAII equivalent
+    }
+}`,
+        say: "In Java the GC handles everything so there's no smart pointer equivalent. For explicit resource cleanup — file handles, sockets, connections — you implement AutoCloseable and use try-with-resources. That's Java's version of RAII — the close method is guaranteed to run when the block exits."
+      },
+    ],
+    followups: [
+      { q: "When do you use shared_ptr instead of unique_ptr?", a: "When multiple owners genuinely share the same object and you can't define a single owner. For example, a cached entity that multiple systems hold references to. Default to unique_ptr — it's simpler and has zero overhead. Use shared_ptr only when sharing is truly required." },
+      { q: "What's the overhead of shared_ptr vs unique_ptr?", a: "unique_ptr is zero overhead — it compiles down to the same code as a raw pointer. shared_ptr has a reference count stored in a separate heap allocation, and incrementing/decrementing it is atomic — which costs CPU time in multithreaded code." },
+      { q: "What happens if you mix raw pointers and smart pointers?", a: "If you hand a raw pointer out from a unique_ptr and the unique_ptr gets deleted, the raw pointer is now dangling — accessing it is undefined behavior. Never extract a raw pointer from a smart pointer and store it beyond the smart pointer's lifetime." },
+    ]
+  }
+];
+
+/* ── APP STATE ── */
+let currentProblem = null;
+let currentLang    = 'cpp';
+let currentBlock   = 0;
+let timerInterval  = null;
+let timerSec       = 45 * 60;
+let msgQueue       = [];
+
+/* ── SCREEN MANAGEMENT ── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goLanding() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  msgQueue.forEach(t => clearTimeout(t)); msgQueue = [];
+  showScreen('screen-landing');
+}
+
+/* ── BUILD LANDING CARDS ── */
+function buildLanding() {
+  const grid = document.getElementById('probGrid');
+  grid.innerHTML = '';
+  PROBLEMS.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'prob-card';
+    card.innerHTML = `
+      <div class="prob-card-left">
+        <div class="prob-rank">🛡️ Problem #${p.rank} of ${PROBLEMS.length}</div>
+        <div class="prob-name">${p.title}</div>
+        <div class="prob-why">${p.why}</div>
+        <div class="prob-tags">${p.tags.map(t => `<span class="prob-tag ${t==='C++'?'cpp':t==='Java'?'java':''}">${t}</span>`).join('')}</div>
+      </div>
+      <div class="prob-card-right">
+        <span class="prob-badge ${p.probClass}">${p.prob}%</span>
+        <span class="prob-badge-label">Probability</span>
+        <div class="prob-est">~${p.estMin} min</div>
+        <button class="prob-launch-btn" onclick="launchProblem('${p.id}')">▶ START SESSION</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+/* ── LAUNCH PROBLEM ── */
+function launchProblem(id) {
+  currentProblem = PROBLEMS.find(p => p.id === id);
+  currentBlock   = 0;
+  currentLang    = 'cpp';
+  document.getElementById('hudProblemName').textContent   = currentProblem.title;
+  document.getElementById('stripTitle').textContent       = currentProblem.title;
+  document.getElementById('stripWhy').textContent         = currentProblem.why;
+  document.getElementById('stripBadge').textContent       = currentProblem.prob + '%';
+  document.getElementById('stripBadge').className        = 'wb-prob-strip-badge ' + currentProblem.probClass;
+  document.getElementById('cornerNote').textContent       = currentProblem.cornerNote;
+  document.getElementById('wbNotes').value                = '';
+  document.getElementById('followupToggle').classList.remove('open');
+  document.getElementById('wbFollowups').classList.remove('open');
+  setLang('cpp');
+  renderBlock();
+  startTimer();
+  runInterviewerScript();
+  showScreen('screen-wb-interview');
+}
+
+/* ── LANGUAGE ── */
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnCpp').classList.toggle('active', lang === 'cpp');
+  document.getElementById('btnJava').classList.toggle('active', lang === 'java');
+  currentBlock = 0;
+  renderBlock();
+}
+
+/* ── RENDER CURRENT BLOCK ── */
+function renderBlock() {
+  const p      = currentProblem;
+  const blocks = currentLang === 'cpp' ? p.cpp_blocks : (p.java_blocks || p.cpp_blocks);
+  const total  = blocks.length;
+  const b      = blocks[currentBlock];
+
+  document.getElementById('wbBlockCounter').textContent = `Block ${currentBlock + 1} / ${total}`;
+  document.getElementById('wbPhaseLabel').textContent   = currentBlock === 0 ? 'INTRO' : currentBlock === total - 1 ? 'WRAP-UP' : 'CODING';
+
+  const area = document.getElementById('wbBoardArea');
+  area.innerHTML = `
+    <div>
+      <div class="wb-block-header">
+        <span class="wb-block-num">Block ${currentBlock + 1} / ${total}</span>
+        <span class="wb-block-label-text">${b.label}</span>
+      </div>
+      <div class="wb-code-display">${escHtml(b.code)}</div>
+      <div class="wb-say-box">
+        <span class="wb-say-icon">💬</span>
+        <div>
+          <div class="wb-say-label">Say while writing</div>
+          <div class="wb-say-text">"${b.say}"</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Dots
+  const dots = document.getElementById('navDots');
+  dots.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'wb-nav-dot' + (i === currentBlock ? ' active' : i < currentBlock ? ' done' : '');
+    dots.appendChild(d);
+  }
+
+  document.getElementById('btnPrev').disabled = currentBlock === 0;
+  document.getElementById('btnNext').disabled = currentBlock === total - 1;
+  document.getElementById('btnNext').textContent = currentBlock === total - 1 ? 'Done ✓' : 'Next →';
+
+  // Render follow-ups
+  const fi = document.getElementById('wbFollowupsInner');
+  fi.innerHTML = `<div class="wb-followups-title">⚠ Follow-up Q&A — Most Likely Drills</div>` +
+    p.followups.map(f => `<div class="wb-fq-item"><div class="wb-fq-q">${f.q}</div><div class="wb-fq-a">${f.a}</div></div>`).join('');
+
+  area.scrollTop = 0;
+}
+
+function prevBlock() { if (currentBlock > 0) { currentBlock--; renderBlock(); } }
+function nextBlock() {
+  const blocks = currentLang === 'cpp' ? currentProblem.cpp_blocks : (currentProblem.java_blocks || currentProblem.cpp_blocks);
+  if (currentBlock < blocks.length - 1) { currentBlock++; renderBlock(); }
+}
+
+/* ── FOLLOW-UPS ── */
+function toggleFollowups() {
+  const panel  = document.getElementById('wbFollowups');
+  const toggle = document.getElementById('followupToggle');
+  const open   = panel.classList.toggle('open');
+  toggle.classList.toggle('open', open);
+  toggle.textContent = open ? '▲ Hide Follow-up Q&A' : '⚠ Show Follow-up Q&A';
+}
+
+/* ── TIMER ── */
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerSec = 45 * 60;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timerSec--;
+    if (timerSec < 0) timerSec = 0;
+    updateTimerDisplay();
+    const el = document.getElementById('wbTimer');
+    if (timerSec <= 300) el.style.color = '#f87171';
+    else if (timerSec <= 600) el.style.color = '#fbbf24';
+    else el.style.color = '';
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSec / 60).toString().padStart(2, '0');
+  const s = (timerSec % 60).toString().padStart(2, '0');
+  document.getElementById('wbTimer').textContent = `${m}:${s}`;
+}
+
+/* ── INTERVIEWER CHAT SCRIPT ── */
+function runInterviewerScript() {
+  const chat = document.getElementById('wbChatMessages');
+  chat.innerHTML = '';
+  msgQueue.forEach(t => clearTimeout(t));
+  msgQueue = [];
+
+  addSystemMsg('Session started · ' + currentProblem.title);
+
+  currentProblem.interviewer.forEach(msg => {
+    const t = setTimeout(() => addInterviewerMsg(msg.text), msg.delay);
+    msgQueue.push(t);
+  });
+}
+
+function addInterviewerMsg(text) {
+  const chat = document.getElementById('wbChatMessages');
+  const now  = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const div  = document.createElement('div');
+  div.className = 'wb-msg interviewer';
+  div.innerHTML = `<div class="wb-msg-bubble">${text}</div><div class="wb-msg-time">${now}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addSystemMsg(text) {
+  const chat = document.getElementById('wbChatMessages');
+  const div  = document.createElement('div');
+  div.className = 'wb-msg system';
+  div.innerHTML = `<div class="wb-msg-bubble">[ ${text} ]</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ── UTILITY ── */
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── INIT ── */
+buildLanding();
+</script>
 </body>
 </html>

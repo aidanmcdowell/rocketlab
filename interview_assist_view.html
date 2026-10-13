@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Assist</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 32px 40px 80px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  .doc-title {
+    font-size: 13px;
+    font-family: monospace;
+    color: #555;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .scenario-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .scenario-sub {
+    font-size: 13px;
+    color: #666;
+    font-family: monospace;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #222;
+  }
+
+  /* ── SECTION BLOCK ── */
+  .section {
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid #1e1e1e;
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-size: 10px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .label-see    { color: #666; }
+  .label-say    { color: #38bdf8; }
+  .label-code   { color: #4ade80; }
+  .label-after  { color: #fbbf24; }
+  .label-next   { color: #a78bfa; }
+
+  /* ── WHAT I SEE ── */
+  .see-text {
+    font-size: 14px;
+    color: #aaa;
+    font-style: italic;
+  }
+
+  /* ── QUOTE ── */
+  .quote {
+    background: #1a1a1a;
+    border-left: 4px solid #38bdf8;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e0f2fe;
+    line-height: 1.65;
+    border-radius: 0 6px 6px 0;
+  }
+  .quote.amber {
+    border-left-color: #fbbf24;
+    color: #fef3c7;
+  }
+
+  /* ── CODE CHUNK ── */
+  .chunk { margin-bottom: 20px; }
+  .chunk:last-child { margin-bottom: 0; }
+
+  .chunk-label {
+    font-size: 10px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #4ade80;
+    margin-bottom: 7px;
+  }
+
+  pre {
+    background: #0d0d0d;
+    border: 1px solid #1e2e1e;
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #86efac;
+    overflow-x: auto;
+    white-space: pre;
+    margin-bottom: 8px;
+  }
+
+  .say-inline {
+    background: #0e1a22;
+    border-left: 3px solid #0ea5e9;
+    border-radius: 0 5px 5px 0;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #bae6fd;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .say-inline b {
+    color: #38bdf8;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── CHUNK DIVIDER ── */
+  .chunk + .chunk { padding-top: 16px; border-top: 1px solid #1a1a1a; }
+
+  /* ── THEN DO ── */
+  .then-text {
+    font-size: 15px;
+    color: #c4b5fd;
+    background: #16101f;
+    border-left: 4px solid #7c3aed;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-title">🚀 Rocket Lab · Anh Thai · Interview Assist</div>
+<div class="scenario-name">Scenario 4 — Flight State Machine Sequence Validation</div>
+<div class="scenario-sub">solution_d.py &nbsp;·&nbsp; Python &nbsp;·&nbsp; validate_sequence(events)</div>
+
+<!-- WHAT I SEE -->
+<div class="section">
+  <div class="section-label label-see">🔍 What I See</div>
+  <div class="see-text">Opening prompt — docstring already written, <code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;font-size:12px;"># TODO</code> + <code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;font-size:12px;">pass</code> on lines 20–21, Anh asking for questions before you code.</div>
+</div>
+
+<!-- SAY FIRST -->
+<div class="section">
+  <div class="section-label label-say">🗣️ Say First — Before You Touch the Keyboard</div>
+  <div class="quote">
+    "Quick questions before I start — can the list come in completely empty? And are the strings always clean, or could one show up as None or just in the wrong order?"
+  </div>
+</div>
+
+<!-- TYPE THIS + SAY WHILE TYPING -->
+<div class="section">
+  <div class="section-label label-code">⌨️ Replace # TODO + pass with this &nbsp;—&nbsp; Say each block as you type</div>
+
+  <div class="chunk">
+    <div class="chunk-label">Block 1 · Transition map</div>
+    <pre>    VALID_TRANSITIONS = {
+        "PRE_LAUNCH":     "BOOST",
+        "BOOST":          "STAGE_SEP",
+        "STAGE_SEP":      "COAST",
+        "COAST":          "PAYLOAD_DEPLOY",
+        "PAYLOAD_DEPLOY": "MISSION_COMPLETE",
+    }</pre>
+    <div class="say-inline"><b>💬 Say:</b> "I'm setting up a lookup table — each state maps to the only state that can legally come after it."</div>
+  </div>
+
+  <div class="chunk">
+    <div class="chunk-label">Block 2 · Empty list guard</div>
+    <pre>    if not events:
+        return {"valid": False, "error": "Empty event list"}</pre>
+    <div class="say-inline"><b>💬 Say:</b> "If the list is empty, I return an error immediately — nothing to check."</div>
+  </div>
+
+  <div class="chunk">
+    <div class="chunk-label">Block 3 · Must start with PRE_LAUNCH</div>
+    <pre>    if events[0] != "PRE_LAUNCH":
+        return {"valid": False, "error": f"Invalid start state: {events[0]}"}</pre>
+    <div class="say-inline"><b>💬 Say:</b> "The first event has to be PRE_LAUNCH — anything else fails right here before I even look at the rest."</div>
+  </div>
+
+  <div class="chunk">
+    <div class="chunk-label">Block 4 · Walk through each pair</div>
+    <pre>    for i in range(len(events) - 1):
+        current  = events[i]
+        nxt      = events[i + 1]
+        expected = VALID_TRANSITIONS.get(current)
+        if expected is None or nxt != expected:
+            return {"valid": False, "error": f"Invalid transition from {current} to {nxt} at index {i}"}</pre>
+    <div class="say-inline"><b>💬 Say:</b> "I walk through each pair — current state and the next one. I check what's allowed in the table, and if it doesn't match, I stop and return exactly which jump was wrong."</div>
+  </div>
+
+  <div class="chunk">
+    <div class="chunk-label">Block 5 · Return success</div>
+    <pre>    return {"valid": True, "final_state": events[-1]}</pre>
+    <div class="say-inline"><b>💬 Say:</b> "If we made it through every step without hitting a bad transition, the sequence is valid and I return whatever state we ended up in."</div>
+  </div>
+
+</div>
+
+<!-- SAY AFTER -->
+<div class="section">
+  <div class="section-label label-after">🗣️ Say After You Finish Typing</div>
+  <div class="quote amber">
+    "Alright — that handles the empty case, bad starting state, and any illegal jump in the middle. Let me run the tests."
+  </div>
+</div>
+
+<!-- THEN DO -->
+<div class="section">
+  <div class="section-label label-next">⚡ Then Do This</div>
+  <div class="then-text">→ Click Run Tests. All pass → wait for Anh's next question. A test fails → screenshot it.</div>
+</div>
+
+</body>
+</html>
